@@ -1,6 +1,9 @@
 package sat_solver
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type SATFormula struct {
 	formula *CNFFormula
@@ -14,8 +17,11 @@ func NewSATFormula(formula *CNFFormula, vars *SATVariableMapping) *SATFormula {
 	}
 }
 
-func trimQuotes(s string) string {
+func trimVarQuotes(s string) string {
 	if len(s) >= 2 {
+		if s[0] == '[' && s[len(s)-1] == ']' {
+			return "var" + s[1: len(s)-1]
+		}
 		if s[0] == '"' && s[len(s)-1] == '"' {
 			return s[1 : len(s)-1]
 		}
@@ -33,9 +39,9 @@ func (f *SATFormula) String() string {
 			} else if (v == -1) {
 				partialResult[i] = "False"
 			} else if (v > 0) {
-				partialResult[i] = trimQuotes(f.vars.reverse[v])
+				partialResult[i] = trimVarQuotes(f.vars.reverse[v])
 			} else {
-				partialResult[i] = "-" + trimQuotes(f.vars.reverse[-v])
+				partialResult[i] = "-" + trimVarQuotes(f.vars.reverse[-v])
 			}
 		}
 		result[j] = "(" + strings.Join(partialResult, " v ") + ")"
@@ -71,6 +77,7 @@ type SATVariableMapping struct {
 	names map[string]int
 	reverse map[int]string
 	uniqueID int
+	freshVarNameID uint
 }
 
 func NewSATVariableMapping() *SATVariableMapping {
@@ -78,7 +85,19 @@ func NewSATVariableMapping() *SATVariableMapping {
 		names:    map[string]int{},
 		reverse:  map[int]string{},
 		uniqueID: 2,
+		freshVarNameID: 1,
 	}
+}
+
+func (vars *SATVariableMapping) Fresh() (string, int) {
+	newVarNameID := vars.freshVarNameID
+	newID := vars.uniqueID
+	name := fmt.Sprintf("[%d]", newVarNameID)
+	vars.uniqueID++
+	vars.freshVarNameID++
+	vars.names[name] = newID
+	vars.reverse[newID] = name
+	return name, newID
 }
 
 func (vars *SATVariableMapping) Get(name string) int {

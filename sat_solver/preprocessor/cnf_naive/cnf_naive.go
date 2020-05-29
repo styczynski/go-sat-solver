@@ -32,8 +32,22 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping)
 		if err != nil {
 			return err, nil
 		}
-		arg1.MulWith(arg2)
-		return nil, arg1
+
+		len1 := len(arg1.Variables)
+		len2 := len(arg2.Variables)
+
+		if (len1 == 1 || len2 == 1) {
+			arg1.MulWith(arg2)
+			return nil, arg1
+		} else {
+			// Alternative method for avoiding exponential formula growth:
+			//   Use fresh variable Z
+			//   Return CNF((Z -> P) ^ (~Z -> Q))
+			z, _ := vars.Fresh()
+			return convertToCnf(sat_solver.MakeAnd(
+				sat_solver.MakeImplies(sat_solver.MakeVar(z), expr.Or.Arg1),
+				sat_solver.MakeImplies(sat_solver.MakeNot(sat_solver.MakeVar(z)), expr.Or.Arg2)), vars)
+		}
 	} else if expr.Not != nil {
 		inner := expr.Not.Formula
 		// Not with variable

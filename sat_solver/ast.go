@@ -8,6 +8,14 @@ type Variable struct {
 	String        string     `"Var" @String`
 }
 
+func MakeVar(name string) *Formula {
+	return &Formula{
+		Variable: &Variable{
+			String: name,
+		},
+	}
+}
+
 type Not struct {
 	Formula *Formula `"Not" @@`
 }
