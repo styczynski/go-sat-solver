@@ -14,7 +14,7 @@ var (
 	graphQLLexer = lexer.Must(ebnf.New(`
     Comment = ("#" | "//") { "\u0000"…"\uffff"-"\n" } .
     Ident = (alpha | "_") { "_" | alpha | digit } .
-	String = "\"" (alpha | "_") { "_" | alpha | digit } "\"" .
+	Name = "\"" (alpha | "_") { "_" | alpha | digit } "\"" .
     Number = ("." | digit) {"." | digit} .
     Whitespace = " " | "\t" | "\n" | "\r" .
     Punct = "!"…"/" | ":"…"@" | "["…`+"\"`\""+` | "{"…"~" .

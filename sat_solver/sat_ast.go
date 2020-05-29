@@ -29,11 +29,20 @@ func trimVarQuotes(s string) string {
 	return s
 }
 
+func (f *SATFormula) Variables() *SATVariableMapping {
+	return f.vars
+}
+
+func (f *SATFormula) Formula() *CNFFormula {
+	return f.formula
+}
+
 func (f *SATFormula) String() string {
 	result := make([]string, len(f.formula.Variables))
 	for j, clause := range f.formula.Variables {
 		partialResult := make([]string, len(clause))
-		for i, v := range clause {
+		for i, id := range clause {
+			v := int64(id)
 			if (v == 1) {
 				partialResult[i] = "True"
 			} else if (v == -1) {
@@ -54,7 +63,7 @@ type CNFFormula struct {
 	// 1 is true
 	// x > 1 is a variable with unique id = x
 	// x < 1 is a variable with unique id = -x
-	Variables [][]int
+	Variables [][]int64
 }
 
 func (f *CNFFormula) AndWith(e *CNFFormula) {
@@ -64,32 +73,61 @@ func (f *CNFFormula) AndWith(e *CNFFormula) {
 func (f *CNFFormula) MulWith(e *CNFFormula) {
 	lenF := len(f.Variables)
 	lenE := len(e.Variables)
-	newVariables := make([][]int, lenF * lenE)
-	for indexF, clauseF := range f.Variables {
-		for indexE, clauseE := range e.Variables {
-			newVariables[indexF*lenE + indexE] = append(clauseF, clauseE...)
+	newVariables := make([][]int64, 0, lenF * lenE)
+	shouldAddE := true
+	shouldAddF := true
+
+	for _, clauseF := range f.Variables {
+		shouldAddF = true
+		for _, varF := range clauseF {
+			if varF == 1 {
+				shouldAddF = false
+				break
+			}
+		}
+		if !shouldAddF {
+			continue
+		}
+		for _, clauseE := range e.Variables {
+			shouldAddE = true
+			for _, varE := range clauseE {
+				if varE == 1 {
+					shouldAddE = false
+					break
+				}
+			}
+			if shouldAddE {
+				newVariables = append(newVariables, append(clauseF, clauseE...))
+			}
 		}
 	}
 	f.Variables = newVariables
 }
 
 type SATVariableMapping struct {
-	names map[string]int
-	reverse map[int]string
-	uniqueID int
-	freshVarNameID uint
+	names map[string]int64
+	reverse map[int64]string
+	uniqueID int64
+	freshVarNameID uint64
 }
 
 func NewSATVariableMapping() *SATVariableMapping {
 	return &SATVariableMapping{
-		names:    map[string]int{},
-		reverse:  map[int]string{},
+		names:    map[string]int64{},
+		reverse:  map[int64]string{},
 		uniqueID: 2,
 		freshVarNameID: 1,
 	}
 }
 
-func (vars *SATVariableMapping) Fresh() (string, int) {
+func (vars *SATVariableMapping) Reverse(id int64) string {
+	if id < 0 {
+		return fmt.Sprintf("-%s", trimVarQuotes(vars.reverse[-id]))
+	}
+	return trimVarQuotes(vars.reverse[id])
+}
+
+func (vars *SATVariableMapping) Fresh() (string, int64) {
 	newVarNameID := vars.freshVarNameID
 	newID := vars.uniqueID
 	name := fmt.Sprintf("[%d]", newVarNameID)
@@ -100,7 +138,7 @@ func (vars *SATVariableMapping) Fresh() (string, int) {
 	return name, newID
 }
 
-func (vars *SATVariableMapping) Get(name string) int {
+func (vars *SATVariableMapping) Get(name string) int64 {
 	if id, ok := vars.names[name]; ok {
 		return id
 	}

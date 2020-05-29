@@ -1,23 +1,36 @@
 package sat_solver
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Entry struct {
 	Formula *Formula `@@`
 }
 
 type Variable struct {
-	String        string     `"Var" @String`
+	Name string `"Var" @Name`
+}
+
+func (astNode *Variable) String() string {
+	return trimVarQuotes(astNode.Name)
 }
 
 func MakeVar(name string) *Formula {
 	return &Formula{
 		Variable: &Variable{
-			String: name,
+			Name: name,
 		},
 	}
 }
 
 type Not struct {
 	Formula *Formula `"Not" @@`
+}
+
+func (astNode *Not) String() string {
+	return fmt.Sprintf("-%s", astNode.Formula.String())
 }
 
 func MakeNot(Arg1 *Formula) *Formula {
@@ -31,6 +44,10 @@ func MakeNot(Arg1 *Formula) *Formula {
 type And struct {
 	Arg1 *Formula `"And" @@`
 	Arg2 *Formula ` @@`
+}
+
+func (astNode *And) String() string {
+	return fmt.Sprintf("(%s ^ %s)", astNode.Arg1.String(), astNode.Arg2.String())
 }
 
 func MakeAnd(Arg1 *Formula, Arg2 *Formula) *Formula {
@@ -47,6 +64,10 @@ type Or struct {
 	Arg2 *Formula ` @@`
 }
 
+func (astNode *Or) String() string {
+	return fmt.Sprintf("(%s v %s)", astNode.Arg1.String(), astNode.Arg2.String())
+}
+
 func MakeOr(Arg1 *Formula, Arg2 *Formula) *Formula {
 	return &Formula{
 		Or:      &Or{
@@ -59,6 +80,10 @@ func MakeOr(Arg1 *Formula, Arg2 *Formula) *Formula {
 type Implies struct {
 	Arg1 *Formula `"Implies" @@`
 	Arg2 *Formula ` @@`
+}
+
+func (astNode *Implies) String() string {
+	return fmt.Sprintf("(%s -> %s)", astNode.Arg1.String(), astNode.Arg2.String())
 }
 
 func MakeImplies(Arg1 *Formula, Arg2 *Formula) *Formula {
@@ -75,6 +100,10 @@ type Iff struct {
 	Arg2 *Formula ` @@`
 }
 
+func (astNode *Iff) String() string {
+	return fmt.Sprintf("(%s <-> %s)", astNode.Arg1.String(), astNode.Arg2.String())
+}
+
 func MakeIff(Arg1 *Formula, Arg2 *Formula) *Formula {
 	return &Formula{
 		Iff:      &Iff{
@@ -86,6 +115,10 @@ func MakeIff(Arg1 *Formula, Arg2 *Formula) *Formula {
 
 type BooleanConstant struct {
 	Bool string `( @"T" | "F" )`
+}
+
+func (astNode *BooleanConstant) String() string {
+	return astNode.Bool
 }
 
 func MakeBoolConstant(value bool) *Formula {
@@ -111,4 +144,32 @@ type Formula struct {
 	Or       *Or              ` | ( @@ | "(" @@ ")" )`
 	Implies  *Implies         ` | ( @@ | "(" @@ ")" )`
 	Iff      *Iff             ` | ( @@ | "(" @@ ")" )`
+}
+
+func (astNode *Formula) String() string {
+	if astNode.Constant != nil {
+		return astNode.Constant.String()
+	} else if astNode.Variable != nil {
+		return astNode.Variable.String()
+	} else if astNode.Not != nil {
+		return astNode.Not.String()
+	} else if astNode.And != nil {
+		return astNode.And.String()
+	} else if astNode.Or != nil {
+		return astNode.Or.String()
+	} else if astNode.Implies != nil {
+		return astNode.Implies.String()
+	} else if astNode.Iff != nil {
+		return astNode.Iff.String()
+	}
+
+	panic(fmt.Errorf("Unknown AST node given to Formula.Name() method."))
+}
+
+func AndChainToString(clauses []*Formula) string {
+	results := []string{}
+	for _, clause := range clauses {
+		results = append(results, fmt.Sprintf("(%s)", clause.String()))
+	}
+	return strings.Join(results, " ^ ")
 }
