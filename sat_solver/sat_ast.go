@@ -93,6 +93,7 @@ func (f *SATFormula) Measure() SATFormulaStatistics {
 }
 
 func (f *SATFormula) FormulaString() string {
+	return ""
 	result := make([]string, len(f.formula.Variables))
 	for j, clause := range f.formula.Variables {
 		partialResult := make([]string, len(clause))
