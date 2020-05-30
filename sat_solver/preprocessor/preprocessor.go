@@ -13,21 +13,21 @@ func PreprocessAST(formula sat_solver.Entry) (error, *sat_solver.SATFormula) {
 		return err, nil
 	}
 
-	fmt.Printf("Preprocessed formula:\n %s\n", satFormula.String())
+	fmt.Printf("Preprocessed formula:\n %s\n", satFormula.Brief())
 
 	err, simplFormula := VariableElimination(satFormula)
 	if err != nil {
 		return err, nil
 	}
 
-	fmt.Printf("Simplified formula:\n %s\n", simplFormula.String())
+	fmt.Printf("Simplified formula:\n %s\n", simplFormula.Brief())
 
 	err, simplFormula2 := VariableElimination(simplFormula)
 	if err != nil {
 		return err, nil
 	}
 
-	fmt.Printf("Simplified formula2:\n %s\n", simplFormula2.String())
+	fmt.Printf("Simplified formula2:\n %s\n", simplFormula2.Brief())
 
 
 	return nil, satFormula

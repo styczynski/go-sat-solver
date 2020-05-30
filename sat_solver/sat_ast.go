@@ -93,7 +93,6 @@ func (f *SATFormula) Measure() SATFormulaStatistics {
 }
 
 func (f *SATFormula) FormulaString() string {
-	return ""
 	result := make([]string, len(f.formula.Variables))
 	for j, clause := range f.formula.Variables {
 		partialResult := make([]string, len(clause))
@@ -114,13 +113,18 @@ func (f *SATFormula) FormulaString() string {
 	return strings.Join(result, "^")
 }
 
-func (f *SATFormula) String() string {
-	detailsStr := ""
+func (f *SATFormula) Brief() string {
 	if f.err != nil {
-		return fmt.Sprintf("UNSAT Formula:\n %s\n %s", f.err.Error(), f.FormulaString())+detailsStr
+		return fmt.Sprintf("UNSAT Formula: %s", f.err.Error())
 	}
-	detailsStr = f.Measure().String()
-	return f.FormulaString()+detailsStr
+	return f.Measure().String()
+}
+
+func (f *SATFormula) String() string {
+	if f.err != nil {
+		return fmt.Sprintf("UNSAT Formula:\n %s\n %s", f.err.Error(), f.FormulaString())
+	}
+	return f.FormulaString()
 }
 
 type CNFFormula struct {

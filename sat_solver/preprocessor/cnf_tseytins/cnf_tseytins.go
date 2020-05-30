@@ -123,8 +123,8 @@ func ConvertToCNFTseytins(formula sat_solver.Entry) (error, *sat_solver.SATFormu
 	// Add subsitution for the entire formula
 	ts = append(ts, f)
 
-	fmt.Printf("Tseytins input formula:\n %s\n", formula.Formula.String())
-	fmt.Printf("Tseytins output chain:\n %s\n", sat_solver.AndChainToString(ts))
+	//fmt.Printf("Tseytins input formula:\n %s\n", formula.Formula.String())
+	//fmt.Printf("Tseytins output chain:\n %s\n", sat_solver.AndChainToString(ts))
 
 	err, cnfFormula := cnf_naive.ConvertToCnfAndChain(ts, vars)
 	if err != nil {
