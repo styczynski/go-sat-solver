@@ -15,14 +15,14 @@ func PreprocessAST(formula sat_solver.Entry) (error, *sat_solver.SATFormula) {
 
 	fmt.Printf("Preprocessed formula:\n %s\n", satFormula.Brief())
 
-	err, simplFormula := VariableElimination(satFormula)
+	err, simplFormula := Optimize(satFormula)
 	if err != nil {
 		return err, nil
 	}
 
 	fmt.Printf("Simplified formula:\n %s\n", simplFormula.Brief())
 
-	err, simplFormula2 := VariableElimination(simplFormula)
+	err, simplFormula2 := Optimize(simplFormula)
 	if err != nil {
 		return err, nil
 	}

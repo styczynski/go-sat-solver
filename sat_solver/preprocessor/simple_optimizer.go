@@ -571,7 +571,7 @@ func (opt *SimpleOptimizer) blockedClauseElimination() bool {
 	return changeDetected
 }
 
-func VariableElimination(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
+func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 	f := formula.Formula()
 	hashVal := int64(0)
 
