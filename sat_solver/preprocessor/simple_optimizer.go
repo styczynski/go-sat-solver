@@ -15,6 +15,32 @@ func hashVarID(varID int64) int64 {
 	return (1 >> int64(varID) % 63)
 }
 
+type UnsatReasonUP struct {}
+
+func NewUnsatReasonUP() *UnsatReasonUP {
+	return &UnsatReasonUP{}
+}
+
+func (reason *UnsatReasonUP) Describe() string {
+	return fmt.Sprintf("Unit propagation cannot propagate variable with T or F.")
+}
+
+type UnsatReasonStrengthening struct {
+	clause string
+	varName string
+}
+
+func NewUnsatReasonStrengthening(clause *Clause, varID int64, opt *SimpleOptimizer) *UnsatReasonStrengthening {
+	return &UnsatReasonStrengthening{
+		clause: clause.String(opt),
+		varName: opt.vars.Reverse(varID),
+	}
+}
+
+func (reason *UnsatReasonStrengthening) Describe() string {
+	return fmt.Sprintf("Strengthening clause %s by variable %s produced an empty clause.", reason.clause, reason.varName)
+}
+
 type Clause struct {
 	hash int64
 	vars map[int64]struct{}
@@ -152,7 +178,7 @@ func (opt *SimpleOptimizer) getAddedClauseCandidates(added *map[*Clause]struct{}
 }
 
 // Remove varID from clause
-func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) {
+func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) error {
 	//fmt.Printf("Strengthen clause: %s by %s\n", clause.String(opt), opt.vars.Reverse(varID))
 
 	len1 := len(clause.vars)
@@ -168,7 +194,9 @@ func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) {
 	}
 
 	if len1 == 1 && len2 == 0 {
-		delete(opt.singular, clause)
+		// Reverse change
+		clause.vars[varID] = struct{}{}
+		return sat_solver.NewUnsatError(NewUnsatReasonStrengthening(clause, varID, opt))
 	}
 
 	opt.strenghtened[clause] = struct{}{}
@@ -176,12 +204,14 @@ func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) {
 		opt.touched[v] = struct{}{}
 	}
 
+	// WHAT?
 	// Remove empty clause
-	if len(clause.vars) == 0 {
-		opt.removeClause(clause)
-	}
+	//if len(clause.vars) == 0 {
+	//	opt.removeClause(clause)
+	//}
 
 	//fmt.Printf("Strengthen result: %s\n", clause.String(opt))
+	return nil
 }
 
 func (opt *SimpleOptimizer) removeClause(clause *Clause) {
@@ -208,15 +238,16 @@ func (opt *SimpleOptimizer) subsume(clause *Clause) {
 	}
 }
 
-func (opt *SimpleOptimizer) removeVariable(varID int64) {
-	for c := range opt.clauses {
-		delete(c.vars, varID)
-		if len(c.vars) == 0 {
-			opt.removeClause(c)
-		}
-	}
-	delete(opt.occur, varID)
-}
+//func (opt *SimpleOptimizer) removeVariable(varID int64) {
+//	for c := range opt.clauses {
+//		delete(c.vars, varID)
+//		// WHAT?
+//		//if len(c.vars) == 0 {
+//		//	opt.removeClause(c)
+//		//}
+//	}
+//	delete(opt.occur, varID)
+//}
 
 func (opt *SimpleOptimizer) optimizeTrivialTautologies() bool {
 	detectedChange := false
@@ -232,53 +263,80 @@ func (opt *SimpleOptimizer) optimizeTrivialTautologies() bool {
 	return detectedChange
 }
 
-func (opt *SimpleOptimizer) performUnitPropagation() bool {
-	units := []int64{}
+func (opt *SimpleOptimizer) performUnitPropagation() (error, bool) {
+	units := map[int64]struct{}{}
 	for c := range opt.singular {
 		if len(c.vars) == 1 {
 			for varID := range c.vars {
-				units = append(units, varID)
+				units[varID] = struct{}{}
 				break
 			}
 		}
 	}
 	if len(units) == 0 {
-		return false
+		return nil, false
 	}
 
-	for _, varID := range units {
+	// Test if unit generation does not generate empty clause
+	clausesToRemove := map[*Clause]struct{}{}
+	for varID := range units {
+		for c := range opt.occur[varID] {
+			clausesToRemove[c] = struct{}{}
+		}
+	}
+
+	failedUnits := map[int64]struct{}{}
+	unitsToCheck := units
+	newUnitsToCheck := map[int64]struct{}{}
+
+	for {
+		for varID := range unitsToCheck {
+			for c := range opt.occur[-varID] {
+				if _, ok := clausesToRemove[c]; !ok {
+					// Clause will not be removed
+					if len(c.vars) == 1 {
+						// The clause will be empty after removal of variable varID
+						delete(units, varID)
+						failedUnits[varID] = struct{}{}
+						// Normally we will propagate negation of variable i.e -varID
+						// But if -varID already failed then we generate UNSAT
+						if _, ok := failedUnits[-varID]; ok {
+							// UNSAT
+							return sat_solver.NewUnsatError(NewUnsatReasonUP()), false
+						} else {
+							newUnitsToCheck[-varID] = struct{}{}
+							units[-varID] = struct{}{}
+						}
+						break
+					}
+				}
+			}
+		}
+		if len(newUnitsToCheck) == 0 {
+			break
+		}
+		unitsToCheck = newUnitsToCheck
+		newUnitsToCheck = map[int64]struct{}{}
+	}
+
+	if len(units) == 0 {
+		return nil, false
+	}
+
+	for varID := range units {
+		for c := range opt.occur[-varID] {
+			err := opt.strenghten(c, -varID)
+			if err != nil {
+				return sat_solver.WrapError(err, "When performing unit propagation for variable %s (removing negation)", opt.vars.Reverse(varID)), false
+			}
+		}
 		for c := range opt.occur[varID] {
 			opt.removeClause(c)
 		}
-		for c := range opt.occur[-varID] {
-			opt.strenghten(c, -varID)
-		}
 	}
 
-	return true
+	return nil, true
 }
-
-//func removeDuplicates(bve *SimpleOptimizer) bool {
-//	toRemove := []*Clause{}
-//	for v1 := range bve.clauses {
-//		if !v1.isDeleted {
-//			for v2 := range bve.clauses {
-//				if !v2.isDeleted {
-//					if v1 != v2 && len(v1.vars) < 10 && len(v2.vars) < 10 {
-//						if !notEqual(v1, v2, bve) {
-//							v1.isDeleted = true
-//							toRemove = append(toRemove, v1)
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//	for _, c := range toRemove {
-//		removeClause(c, bve)
-//	}
-//	return len(toRemove) > 0
-//}
 
 func (opt *SimpleOptimizer) maybeEliminate(varID int64) {
 	if len(opt.occur[varID]) > 10 || len(opt.occur[-varID]) > 10 {
@@ -295,21 +353,26 @@ func (opt *SimpleOptimizer) propagateToplevel() {
  * Eliminates x by clause distribution if the result has fewer clauses than the original
  * (after removing trivially satisfied clauses)
  */
-func(opt *SimpleOptimizer)  maybeClauseDistribute(varID int64) {
+func(opt *SimpleOptimizer) maybeClauseDistribute(varID int64) {
 	// TODO: Implement
 }
 
-func (opt *SimpleOptimizer) cleanup() {
+func (opt *SimpleOptimizer) cleanup() error {
 	for {
-		r1 := opt.performUnitPropagation()
+		err, r1 := opt.performUnitPropagation()
+		if err != nil {
+			return err
+		}
 		r2 := opt.optimizeTrivialTautologies()
-		if !r1 && !r2 {
+		r3 := opt.blockedClauseElimination()
+		if !r1 && !r2 && !r3 {
 			break
 		}
 	}
+	return nil
 }
 
-func (opt *SimpleOptimizer) simplify() {
+func (opt *SimpleOptimizer) simplify() error {
 
 	opt.singular = map[*Clause]struct{}{}
 	for clause := range opt.clauses {
@@ -368,7 +431,10 @@ func (opt *SimpleOptimizer) simplify() {
 
 			// Loop
 			for c := range S1 {
-				opt.selfSubsume(c)
+				err := opt.selfSubsume(c)
+				if err != nil {
+					return err
+				}
 			}
 			// May strengthen/remove clauses
 			opt.propagateToplevel()
@@ -399,23 +465,76 @@ func (opt *SimpleOptimizer) simplify() {
 				break
 			}
 		}
-		opt.cleanup()
+		err := opt.cleanup()
+		if err != nil {
+			return err
+		}
 
 		if len(opt.added) == 0 {
 			break
 		}
 	}
 
+	return nil
 }
 
-func (opt *SimpleOptimizer) selfSubsume(clause *Clause) {
+func (opt *SimpleOptimizer) selfSubsume(clause *Clause) error {
 	for v := range clause.vars {
 		subsumedBy := opt.findSubsumed(clause.negateClauseVar(v))
 		for _, cPrim := range subsumedBy {
 			//fmt.Printf("<%s> subsumes %s by %s\n", clause.String(opt), cPrim.String(opt), opt.vars.Reverse(v))
-			opt.strenghten(cPrim, -v)
+			err := opt.strenghten(cPrim, -v)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+func (opt *SimpleOptimizer) blockedClauseElimination() bool {
+
+	changeDetected := false
+	for v, clausesWithV := range opt.occur {
+		// Check if clauseWithV is blocked
+		for clauseWithV := range clausesWithV {
+			isBlocked := true
+
+			//debugTraceClause := []*Clause{}
+			//debugTraceClauseVarID := []int64{}
+
+			if len(opt.occur[-v]) > 0 {
+				for clauseWithNegV := range opt.occur[-v] {
+					// Check if clauseWithV v clauseWithNegV is tautology
+					isTautology := false
+					for q := range clauseWithV.vars {
+						if _, ok := opt.occur[-q][clauseWithNegV]; ok && q != v {
+
+							//debugTraceClause = append(debugTraceClause, clauseWithNegV)
+							//debugTraceClauseVarID = append(debugTraceClauseVarID, q)
+
+							isTautology = true
+							break
+						}
+					}
+					if !isTautology {
+						isBlocked = false
+						break
+					}
+				}
+				if isBlocked {
+					// We can remove blocked clause
+					/*fmt.Printf("Clause %s is blocked on %s:\n", clauseWithV.String(opt), opt.vars.Reverse(v))
+					for i, c := range debugTraceClause {
+						fmt.Printf("   by %s (var %s)\n", c.String(opt), opt.vars.Reverse(debugTraceClauseVarID[i]))
+					}*/
+					opt.removeClause(clauseWithV)
+					changeDetected = true
+				}
+			}
+		}
+	}
+	return changeDetected
 }
 
 func VariableElimination(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
@@ -457,7 +576,26 @@ func VariableElimination(formula *sat_solver.SATFormula) (error, *sat_solver.SAT
 		bve.clauses[c] = struct{}{}
 	}
 
-	bve.simplify()
+	err := bve.simplify()
+	if err != nil {
+		if v, ok := err.(*sat_solver.UnsatError); ok {
+			newFormula := sat_solver.CNFFormula{
+				Variables: make([][]int64, len(bve.clauses)),
+			}
+			i := 0
+			for c := range bve.clauses {
+				newClause := make([]int64, len(c.vars))
+				j := 0
+				for v := range c.vars {
+					newClause[j] = v
+					j++
+				}
+				newFormula.Variables[i] = newClause
+				i++
+			}
+			return nil, sat_solver.NewSATFormulaShortcut(&newFormula, bve.vars, v)
+		}
+	}
 
 	newFormula := sat_solver.CNFFormula{
 		Variables: make([][]int64, len(bve.clauses)),

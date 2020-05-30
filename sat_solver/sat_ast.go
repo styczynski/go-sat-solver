@@ -8,6 +8,15 @@ import (
 type SATFormula struct {
 	formula *CNFFormula
 	vars *SATVariableMapping
+	err *UnsatError
+}
+
+func NewSATFormulaShortcut(formula *CNFFormula, vars *SATVariableMapping, unsatError *UnsatError) *SATFormula {
+	return &SATFormula{
+		formula: formula,
+		vars:    vars,
+		err: unsatError,
+	}
 }
 
 func NewSATFormula(formula *CNFFormula, vars *SATVariableMapping) *SATFormula {
@@ -37,7 +46,7 @@ func (f *SATFormula) Formula() *CNFFormula {
 	return f.formula
 }
 
-func (f *SATFormula) String() string {
+func (f *SATFormula) FormulaString() string {
 	result := make([]string, len(f.formula.Variables))
 	for j, clause := range f.formula.Variables {
 		partialResult := make([]string, len(clause))
@@ -56,6 +65,13 @@ func (f *SATFormula) String() string {
 		result[j] = "(" + strings.Join(partialResult, " v ") + ")"
 	}
 	return strings.Join(result, "^")
+}
+
+func (f *SATFormula) String() string {
+	if f.err != nil {
+		return fmt.Sprintf("UNSAT Formula:\n %s\n %s", f.err.Error(), f.FormulaString())
+	}
+	return f.FormulaString()
 }
 
 type CNFFormula struct {
