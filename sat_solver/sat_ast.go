@@ -2,6 +2,7 @@ package sat_solver
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -9,6 +10,18 @@ type SATFormula struct {
 	formula *CNFFormula
 	vars *SATVariableMapping
 	err *UnsatError
+}
+
+type SATFormulaStatistics struct {
+	variableCount int64
+	clauseCount int64
+	shortestClause int64
+	longestClause int64
+}
+
+func (stats SATFormulaStatistics) String() string {
+	return fmt.Sprintf("(formula stats: #clauses=%d, #vars=%d, max(|clause|)=%d min(|clause|)=%d)",
+		stats.clauseCount, stats.variableCount, stats.shortestClause, stats.longestClause)
 }
 
 func NewSATFormulaShortcut(formula *CNFFormula, vars *SATVariableMapping, unsatError *UnsatError) *SATFormula {
@@ -46,6 +59,39 @@ func (f *SATFormula) Formula() *CNFFormula {
 	return f.formula
 }
 
+func (f *SATFormula) Measure() SATFormulaStatistics {
+	varIDs := map[int64]struct{}{}
+	clauseCount := int64(len(f.formula.Variables))
+	longestClause := int64(0)
+	shortestClause := int64(math.MaxInt64)
+	for _, clause := range f.formula.Variables {
+		l := int64(len(clause))
+		if l > longestClause {
+			longestClause = l
+		}
+		if l < shortestClause {
+			shortestClause = l
+		}
+		for _, varID := range clause {
+			if varID > 0 {
+				varIDs[varID] = struct{}{}
+			} else {
+				varIDs[-varID] = struct{}{}
+			}
+		}
+	}
+	varCount := int64(0)
+	for range varIDs {
+		varCount++
+	}
+	return SATFormulaStatistics{
+		variableCount: varCount,
+		clauseCount: clauseCount,
+		shortestClause: shortestClause,
+		longestClause: longestClause,
+	}
+}
+
 func (f *SATFormula) FormulaString() string {
 	result := make([]string, len(f.formula.Variables))
 	for j, clause := range f.formula.Variables {
@@ -68,10 +114,12 @@ func (f *SATFormula) FormulaString() string {
 }
 
 func (f *SATFormula) String() string {
+	detailsStr := ""
 	if f.err != nil {
-		return fmt.Sprintf("UNSAT Formula:\n %s\n %s", f.err.Error(), f.FormulaString())
+		return fmt.Sprintf("UNSAT Formula:\n %s\n %s", f.err.Error(), f.FormulaString())+detailsStr
 	}
-	return f.FormulaString()
+	detailsStr = f.Measure().String()
+	return f.FormulaString()+detailsStr
 }
 
 type CNFFormula struct {

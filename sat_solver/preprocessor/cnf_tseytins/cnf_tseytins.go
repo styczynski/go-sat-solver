@@ -36,7 +36,16 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 		*ts = append(*ts, sat_solver.MakeIff(sat_solver.MakeVar(name), sat_solver.MakeOr(leftVar, rightVar)))
 		return nil, sat_solver.MakeVar(name)
 	} else if expr.Not != nil {
-		return nil, expr
+		if expr.Not.Formula.Variable != nil {
+			return nil, expr
+		}
+		err, argVar := convertToCnf(expr.Not.Formula, vars, ts)
+		if err != nil {
+			return err, nil
+		}
+		name, _ := vars.Fresh()
+		*ts = append(*ts, sat_solver.MakeIff(sat_solver.MakeVar(name), sat_solver.MakeNot(argVar)))
+		return nil, sat_solver.MakeVar(name)
 	} else if expr.Implies != nil {
 		err, leftVar := convertToCnf(expr.Implies.Arg1, vars, ts)
 		if err != nil {
@@ -79,6 +88,9 @@ func ConvertToCNFTseytins(formula sat_solver.Entry) (error, *sat_solver.SATFormu
 	// Add subsitution for the entire formula
 	if len(ts) > 0 {
 		ts = append(ts, ts[len(ts)-1].Iff.Arg1)
+	} else {
+		// Append entire formula
+		ts = append(ts, formula.Formula)
 	}
 
 	fmt.Printf("Tseytins input formula:\n %s\n", formula.Formula.String())
