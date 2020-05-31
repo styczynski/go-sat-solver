@@ -114,7 +114,7 @@ func MakeIff(Arg1 *Formula, Arg2 *Formula) *Formula {
 }
 
 type BooleanConstant struct {
-	Bool string `( @"T" | "F" )`
+	Bool string `( @"T" | @"F" )`
 }
 
 func (astNode *BooleanConstant) String() string {

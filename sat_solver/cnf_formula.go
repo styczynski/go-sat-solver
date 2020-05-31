@@ -1,6 +1,7 @@
 package sat_solver
 
 import (
+	"fmt"
 	"math"
 	"strings"
 )
@@ -13,7 +14,17 @@ type CNFFormula struct {
 	Variables [][]int64
 }
 
-func (f *CNFFormula) NormalizeVars(vars *SATVariableMapping) *SATVariableMapping {
+type UnsatReasonCNFNormalization struct {}
+
+func NewUnsatReasonCNFNormalization() *UnsatReasonCNFNormalization {
+	return &UnsatReasonCNFNormalization{}
+}
+
+func (reason *UnsatReasonCNFNormalization) Describe() string {
+	return fmt.Sprintf("Empty clause detected when normalizing CNF formula.")
+}
+
+func (f *CNFFormula) NormalizeVars(vars *SATVariableMapping) (error, *SATVariableMapping, int) {
 	newVars := &SATVariableMapping{
 		names:    map[string]int64{},
 		reverse:  map[int64]string{},
@@ -23,6 +34,9 @@ func (f *CNFFormula) NormalizeVars(vars *SATVariableMapping) *SATVariableMapping
 	newMapping := map[int64]int64{}
 
 	for i, clause := range f.Variables {
+		if len(clause) == 0 {
+			return NewUnsatError(NewUnsatReasonCNFNormalization()), nil, 0
+		}
 		for j, v := range clause {
 			varID := v
 			neg := false
@@ -53,17 +67,17 @@ func (f *CNFFormula) NormalizeVars(vars *SATVariableMapping) *SATVariableMapping
 		}
 	}
 
-	return newVars
+	return nil, newVars, len(newVars.names)
 }
 
 func (f *CNFFormula) Evaluate(vars []bool) bool {
 	for _, clause := range f.Variables {
 		isClauseOk := false
 		for _, v := range clause {
-			if v > 0 && vars[v] {
+			if v > 0 && vars[v-1] {
 				isClauseOk = true
 				break
-			} else if v < 0 && !vars[-v] {
+			} else if v < 0 && !vars[-v-1] {
 				isClauseOk = true
 				break
 			}

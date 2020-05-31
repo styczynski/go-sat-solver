@@ -5,7 +5,7 @@ import (
 )
 
 type FormulaRepresentation interface {
-	NormalizeVars(vars *SATVariableMapping) *SATVariableMapping
+	NormalizeVars(vars *SATVariableMapping) (error, *SATVariableMapping, int)
 	Evaluate(vars []bool) bool
 	Measure() *SATFormulaStatistics
 	String(vars *SATVariableMapping) string
@@ -33,6 +33,19 @@ func NewSATFormula(formula FormulaRepresentation, vars *SATVariableMapping, stat
 		vars:    vars,
 		stats: stats,
 	}
+}
+
+func (f *SATFormula) Normalize() (error, []bool) {
+	err, newVars, varCount := f.formula.NormalizeVars(f.vars)
+	if err != nil {
+		return err, nil
+	}
+	f.vars = newVars
+	return nil, make([]bool, varCount)
+}
+
+func (f * SATFormula) Evaluate(vars []bool) bool {
+	return f.formula.Evaluate(vars)
 }
 
 func trimVarQuotes(s string) string {
