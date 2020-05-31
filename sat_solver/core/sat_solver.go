@@ -2,12 +2,35 @@ package core
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/go-sat-solver/sat_solver"
+	"github.com/go-sat-solver/sat_solver/parser"
 	"github.com/go-sat-solver/sat_solver/preprocessor"
 	"github.com/go-sat-solver/sat_solver/preprocessor/nwf_converter"
 	"github.com/go-sat-solver/sat_solver/solver"
 )
+
+func RunSATSolverOnFilePath(filePath string) (error, int) {
+	r, err := os.Open(filePath)
+	if err != nil {
+		return err, 0
+	}
+	defer r.Close()
+
+	err, ast := parser.ParseInputFormula(r)
+	if err != nil {
+		return err, 0
+	}
+	err, result := RunSATSolver(ast)
+	if err != nil {
+		return err, 0
+	}
+	if result {
+		return nil, 1
+	}
+	return nil, 0
+}
 
 func RunSATSolver(formula *sat_solver.Entry) (error, bool) {
 	err, nwfFormula := nwf_converter.ConvertToNWF(formula)
