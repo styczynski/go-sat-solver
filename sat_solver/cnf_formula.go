@@ -193,9 +193,10 @@ func (f *CNFFormula) Measure() *SATFormulaStatistics {
 	}
 }
 
-func (f *CNFFormula) SaveDIMACSCNF(writer io.Writer) error {
+func (f *CNFFormula) SaveDIMACSCNF(writer io.Writer, varNames *SATVariableMapping) error {
 	vars := make([][]int, len(f.Variables))
 	variableRemap := map[int64]int{}
+	variableNames := map[int64]string{}
 	freeID := 1
 	for i, clause := range f.Variables {
 		vars[i] = make([]int, len(clause))
@@ -209,6 +210,7 @@ func (f *CNFFormula) SaveDIMACSCNF(writer io.Writer) error {
 				} else {
 					variableRemap[-v] = freeID
 					vars[i][j] = -freeID
+					variableNames[-v] = varNames.Reverse(-v)
 					freeID++
 				}
 			} else {
@@ -216,12 +218,23 @@ func (f *CNFFormula) SaveDIMACSCNF(writer io.Writer) error {
 					vars[i][j] = k
 				} else {
 					variableRemap[v] = freeID
+					variableNames[v] = varNames.Reverse(v)
 					vars[i][j] = freeID
 					freeID++
 				}
 			}
 		}
 	}
+
+	for v, name := range variableNames {
+		if varNames.IsFounderVariable(v) {
+			_, err := writer.Write([]byte(fmt.Sprintf("c  %d => Variable \"%s\"\n", v, name)))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	_, err := writer.Write([]byte(fmt.Sprintf("p cnf %d %d\n", len(variableRemap), len(vars))))
 	if err != nil {
 		return err
@@ -244,12 +257,12 @@ func (f *CNFFormula) SaveDIMACSCNF(writer io.Writer) error {
 	return nil
 }
 
-func (f *CNFFormula) SaveDIMACSCNFToFile(filePath string) error {
+func (f *CNFFormula) SaveDIMACSCNFToFile(filePath string, vars *SATVariableMapping) error {
 	outputFile, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
-	err = f.SaveDIMACSCNF(outputFile)
+	err = f.SaveDIMACSCNF(outputFile, vars)
 	if err != nil {
 		return err
 	}

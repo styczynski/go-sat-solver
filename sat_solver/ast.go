@@ -14,7 +14,7 @@ type Variable struct {
 }
 
 func (astNode *Variable) String() string {
-	return trimVarQuotes(astNode.Name)
+	return fmt.Sprintf("Var \"%s\"", trimVarQuotes(astNode.Name))
 }
 
 func MakeVar(name string) *Formula {
@@ -30,7 +30,7 @@ type Not struct {
 }
 
 func (astNode *Not) String() string {
-	return fmt.Sprintf("~%s", astNode.Formula.String())
+	return fmt.Sprintf("Not (%s)", astNode.Formula.String())
 }
 
 func MakeNot(Arg1 *Formula) *Formula {
@@ -50,7 +50,7 @@ type And struct {
 }
 
 func (astNode *And) String() string {
-	return fmt.Sprintf("(%s & %s)", astNode.Arg1.String(), astNode.Arg2.String())
+	return fmt.Sprintf("And (%s) (%s)", astNode.Arg1.String(), astNode.Arg2.String())
 }
 
 func MakeAnd(Arg1 *Formula, Arg2 *Formula) *Formula {
@@ -68,7 +68,7 @@ type Or struct {
 }
 
 func (astNode *Or) String() string {
-	return fmt.Sprintf("(%s | %s)", astNode.Arg1.String(), astNode.Arg2.String())
+	return fmt.Sprintf("Or (%s) (%s)", astNode.Arg1.String(), astNode.Arg2.String())
 }
 
 func MakeOr(Arg1 *Formula, Arg2 *Formula) *Formula {
@@ -86,7 +86,7 @@ type Implies struct {
 }
 
 func (astNode *Implies) String() string {
-	return fmt.Sprintf("(%s => %s)", astNode.Arg1.String(), astNode.Arg2.String())
+	return fmt.Sprintf("Implies (%s) (%s)", astNode.Arg1.String(), astNode.Arg2.String())
 }
 
 func MakeImplies(Arg1 *Formula, Arg2 *Formula) *Formula {
@@ -104,7 +104,7 @@ type Iff struct {
 }
 
 func (astNode *Iff) String() string {
-	return fmt.Sprintf("(%s <=> %s)", astNode.Arg1.String(), astNode.Arg2.String())
+	return fmt.Sprintf("Iff (%s) (%s)", astNode.Arg1.String(), astNode.Arg2.String())
 }
 
 func MakeIff(Arg1 *Formula, Arg2 *Formula) *Formula {

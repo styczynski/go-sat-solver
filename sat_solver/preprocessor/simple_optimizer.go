@@ -521,7 +521,6 @@ func (opt *SimpleOptimizer) propagateToplevel() {
 }
 
 func (opt *SimpleOptimizer) cleanup() error {
-	return nil
 	for {
 		err, r1 := opt.tryPerformUnitPropagation()
 		if err != nil {
@@ -529,8 +528,8 @@ func (opt *SimpleOptimizer) cleanup() error {
 		}
 		r2 := opt.tryOptimizeTrivialTautologies()
 		r3 := opt.blockedClauseElimination()
-		//r4 := opt.tryRemoveDanglingVariables()
-		if !r1 && !r2 && !r3 { //&& !r4 {
+		r4 := opt.tryRemoveDanglingVariables()
+		if !r1 && !r2 && !r3 && !r4 {
 			break
 		}
 	}
@@ -574,7 +573,6 @@ func (opt *SimpleOptimizer) simplify() error {
 	 */
 	opt.strenghtened = map[*Clause]struct{}{}
 
-	return nil
 	for {
 		// Subsumption
 
@@ -776,7 +774,6 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 
 		test_utils.AssertSatResult(bve.Formula(), false)
 
-		bve.PerformUnitPropagation()
 		bve.RemoveHiddenTautologies()
 		fmt.Printf("After RHT:\n %s\n", bve.Formula().String())
 
@@ -787,6 +784,7 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 
 		bve.RemoveDanglingVariables()
 		fmt.Printf("After DNG:\n %s\n", bve.Formula().Brief())
+		test_utils.AssertSatResult(bve.Formula(), false)
 
 		return nil, bve.Formula()
 	}

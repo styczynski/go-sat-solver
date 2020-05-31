@@ -18,6 +18,24 @@ func NewSATVariableMapping() *SATVariableMapping {
 	}
 }
 
+func (vars *SATVariableMapping) IsFounderVariable(id int64) bool {
+		s := ""
+		if id < 0 {
+			s = vars.reverse[-id]
+		} else {
+			s = vars.reverse[id]
+		}
+		if len(s) >= 2 {
+			if s[0] == '[' && s[len(s)-1] == ']' {
+				return false
+			}
+			if s[0] == '"' && s[len(s)-1] == '"' {
+				return true
+			}
+		}
+		return true
+}
+
 func (vars *SATVariableMapping) Reverse(id int64) string {
 	if id < 0 {
 		return fmt.Sprintf("-%s", trimVarQuotes(vars.reverse[-id]))

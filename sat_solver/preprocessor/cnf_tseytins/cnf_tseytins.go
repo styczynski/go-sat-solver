@@ -69,7 +69,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 	} else if expr.Not != nil {
 		if expr.Not.Formula.Variable != nil {
 			v := vars.Get(expr.Not.Formula.Variable.Name)
-			return nil, v, v
+			return nil, -v, -v
 		}
 		err, argVar, _ := convertToCnf(expr.Not.Formula, vars, ts)
 		if err != nil {
@@ -167,17 +167,7 @@ func ConvertToCNFTseytins(formula *sat_solver.Formula) (error, *sat_solver.SATFo
 	fmt.Printf("Tseytins input formula:\n %s\n", formula.String())
 	fmt.Printf("Tseytins output chain:\n %s\n", tseytinsCnf.String())
 
-	err = tseytinsCnf.Formula().(*sat_solver.CNFFormula).SaveDIMACSCNFToFile("./tseytinsCnf.cnf")
-	if err != nil {
-		panic(err)
-	}
 	test_utils.AssertSatResult(tseytinsCnf, false)
-	panic("END")
 
 	return nil, tseytinsCnf
-	//err, cnfFormula := cnf_naive.ConvertToCnfAndChain(ts, vars)
-	//if err != nil {
-	//	return err, nil
-	//}
-	//return nil, sat_solver.NewSATFormula(cnfFormula, vars, nil)
 }

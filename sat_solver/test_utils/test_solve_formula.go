@@ -11,14 +11,18 @@ import (
 
 func AssertSatResult(formula *sat_solver.SATFormula, expectedResult bool) {
 	fmt.Printf("Test SAT assertion.\n")
-	r := TestSolveFormula(formula)
+	r, assgn := TestSolveFormula(formula)
 	if r != expectedResult {
+		for name, val := range assgn {
+			fmt.Printf("  | %s => %t\n", name, val)
+		}
 		panic(fmt.Sprintf("assertSatResult: Expected %t got %t.", expectedResult, r))
 	}
 }
 
-func TestSolveFormula(formula *sat_solver.SATFormula) bool {
+func TestSolveFormula(formula *sat_solver.SATFormula) (bool, map[string]bool) {
 	variableRemap := map[int64]int{}
+	variableNames := map[int]string{}
 	freeID := 1
 	if f, ok := formula.Formula().(*sat_solver.CNFFormula); ok {
 		vars := make([][]int, len(f.Variables))
@@ -35,6 +39,9 @@ func TestSolveFormula(formula *sat_solver.SATFormula) bool {
 						variableRemap[-v] = freeID
 						vars[i][j] = -freeID
 						freeID++
+						if formula.Variables().IsFounderVariable(-v) {
+							variableNames[freeID] = formula.Variables().Reverse(-v)
+						}
 					}
 				} else {
 					if k, ok := variableRemap[v]; ok {
@@ -43,6 +50,9 @@ func TestSolveFormula(formula *sat_solver.SATFormula) bool {
 						variableRemap[v] = freeID
 						vars[i][j] = freeID
 						freeID++
+						if formula.Variables().IsFounderVariable(v) {
+							variableNames[freeID] = formula.Variables().Reverse(v)
+						}
 					}
 				}
 			}
@@ -52,13 +62,17 @@ func TestSolveFormula(formula *sat_solver.SATFormula) bool {
 		s := sat.New()
 		s.AddFormula(formula)
 
-		// For low level details on how a solution came to be:
-		// s.Trace = true
-		// s.Tracer = log.New(os.Stderr, "", log.LstdFlags)
-
 		// Solve it!
 		satResult := s.Solve()
-		return satResult
+
+		satAssgn := map[string]bool{}
+		for vID, val := range s.Assignments() {
+			if v, ok := variableNames[vID]; ok {
+				satAssgn[v] = val
+			}
+		}
+
+		return satResult, satAssgn
 	} else {
 		panic("TestSolveFormula: Non-CNF formulas are not supported yet")
 	}
