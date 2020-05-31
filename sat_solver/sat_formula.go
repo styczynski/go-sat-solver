@@ -36,7 +36,11 @@ func NewSATFormula(formula FormulaRepresentation, vars *SATVariableMapping, stat
 	}
 }
 
-func (f* SATFormula) AST() *Formula {
+func (f *SATFormula) IsQuickUNSAT() bool {
+	return f.err != nil
+}
+
+func (f *SATFormula) AST() *Formula {
 	return f.formula.AST(f.vars)
 }
 

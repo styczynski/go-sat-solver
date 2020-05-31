@@ -25,7 +25,9 @@ func main() {
 		err, ast := parser.ParseInputFormula(r)
 		ctx.FatalIfErrorf(err)
 		err, result := core.RunSATSolver(ast)
-		fmt.Printf("Result is:\n\n %t\n\n", result)
+		if err == nil {
+			fmt.Printf("Result is:\n\n %t\n\n", result)
+		}
 		ctx.FatalIfErrorf(err)
 		err = r.Close()
 		ctx.FatalIfErrorf(err)

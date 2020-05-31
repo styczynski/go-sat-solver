@@ -208,10 +208,10 @@ func optimizeTree(formula *sat_solver.NWFFormula, changeDetected *bool) (error, 
 
 		_, opt1complex := opt1.NodeMetrics()
 		_, opt2complex := opt2.NodeMetrics()
-		if opt1complex + opt2complex <= 30 {
+		if opt1complex + opt2complex <= 40 {
 			// This is expensive
 			opt1s := opt1.Serialize()
-			opt2s := opt1.Serialize()
+			opt2s := opt2.Serialize()
 			//fmt.Printf("collapse %s and %s (%d vs %d)\n", opt1s, opt2s, opt1complex, opt2complex)
 			if opt1s == opt2s {
 				*changeDetected = true
@@ -292,10 +292,10 @@ func optimizeTree(formula *sat_solver.NWFFormula, changeDetected *bool) (error, 
 
 		_, opt1complex := opt1.NodeMetrics()
 		_, opt2complex := opt2.NodeMetrics()
-		if opt1complex + opt2complex <= 30 {
+		if opt1complex + opt2complex <= 40 {
 			// This is expensive
 			opt1s := opt1.Serialize()
-			opt2s := opt1.Serialize()
+			opt2s := opt2.Serialize()
 			//fmt.Printf("collapse %s and %s (%d vs %d)\n", opt1s, opt2s, opt1complex, opt2complex)
 			if opt1s == opt2s {
 				*changeDetected = true
@@ -331,5 +331,6 @@ func ConvertToNWF(formula *sat_solver.Entry) (error, *sat_solver.SATFormula) {
 			break
 		}
 	}
+
 	return nil, sat_solver.NewSATFormula(optF, vars, nil)
 }

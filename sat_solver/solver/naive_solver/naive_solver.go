@@ -14,15 +14,18 @@ func NewNaiveSolver() *NaiveSolver {
 }
 
 func (solver *NaiveSolver) Solve(formula *sat_solver.SATFormula) (error, bool) {
+	fmt.Printf("Naive solver input:\n %s\n", formula.String())
+
 	err, vars := formula.Normalize()
 	if err != nil {
 		return err, false
 	}
 
-	fmt.Printf("Naive solver input:\n %s\n", formula.String())
-
-
 	varCount := int64(len(vars))
+	if varCount > 63 {
+		return fmt.Errorf("Too many variables for naive solver (%d)", varCount), false
+	}
+
 	values := int64(0)
 	fmt.Printf("Vars count: %d\n", varCount)
 	iterCount := int64(math.Exp2(float64(varCount)))

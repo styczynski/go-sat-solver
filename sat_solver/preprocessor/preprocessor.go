@@ -23,5 +23,5 @@ func PreprocessAST(formula *sat_solver.Formula) (error, *sat_solver.SATFormula) 
 
 	fmt.Printf("Simplified formula:\n %s\n", simplFormula.Brief())
 
-	return nil, satFormula
+	return nil, simplFormula
 }

@@ -88,6 +88,8 @@ type SimpleOptimizer struct {
 	touched map[int64]struct{}
 	strenghtened map[*Clause]struct{}
 
+	visitedUnits map[int64]struct{}
+
 	vars *sat_solver.SATVariableMapping
 }
 
@@ -354,6 +356,12 @@ func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 		}
 	}
 
+	for c := range opt.clauses {
+		if c.isDeleted {
+			return fmt.Errorf("Found deleted clause on clause list: %s", c.String(opt))
+		}
+	}
+
 	return nil
 }
 
@@ -418,19 +426,35 @@ func (opt *SimpleOptimizer) optimizeTrivialTautologies() bool {
 }
 
 func (opt *SimpleOptimizer) performUnitPropagation() (error, bool) {
+
 	varToRemove := int64(0)
 	for c := range opt.singular {
 		if len(c.vars) == 1 && !c.isDeleted {
 			for varID := range c.vars {
-				varToRemove = varID
-				break
+				if _, ok := opt.visitedUnits[varID]; !ok {
+					varToRemove = varID
+					break
+				}
 			}
 			break
 		}
 	}
+
+	// Try with non-singular clauses
+	//if varToRemove == 0 {
+	//	for varID, _ := range opt.occur {
+	//		if _, ok := opt.visitedUnits[varID]; !ok {
+	//			varToRemove = varID
+	//			break
+	//		}
+	//	}
+	//}
+
 	if varToRemove == 0 {
 		return nil, false
 	}
+
+	opt.visitedUnits[varToRemove] = struct{}{}
 
 	willTriggerUnsat := false
 	for c := range opt.occur[-varToRemove] {
@@ -485,7 +509,8 @@ func (opt *SimpleOptimizer) cleanup() error {
 		}
 		r2 := opt.optimizeTrivialTautologies()
 		r3 := opt.blockedClauseElimination()
-		if !r1 && !r2 && !r3 {
+		//r4 := opt.tryRemoveDanglingVariables()
+		if !r1 && !r2 && !r3 { //&& !r4 {
 			break
 		}
 	}
@@ -668,6 +693,7 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 			occur:   map[int64]map[*Clause]struct{}{},
 			occurBi: map[int64]map[*Clause]struct{}{},
 			vars:    formula.Variables(),
+			visitedUnits: map[int64]struct{}{},
 		}
 
 		for _, clause := range f.Variables {
@@ -713,6 +739,9 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 			bve.clauses[c] = struct{}{}
 		}
 
+
+		fmt.Printf("Running simple optimizer\n")
+
 		err := bve.simplify()
 		if err != nil {
 			if v, ok := err.(*sat_solver.UnsatError); ok {
@@ -720,14 +749,18 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 				return nil, sat_solver.NewSATFormulaShortcut(f.Formula(), f.Variables(), nil, v)
 			}
 		}
+		fmt.Printf("Simple optimizer exited\n")
 
 		fmt.Printf("After main simplification:\n %s\n", bve.Formula().Brief())
 
-		bve.RemoveHiddenTautologies()
+		//bve.RemoveHiddenTautologies()
 		fmt.Printf("After RHT:\n %s\n", bve.Formula().Brief())
 
-		bve.DistributeClauses()
-		fmt.Printf("After CD:\n %s\n", bve.Formula().Brief())
+		//bve.DistributeClauses()
+		//fmt.Printf("After CD:\n %s\n", bve.Formula().String())
+
+		bve.RemoveDanglingVariables()
+		fmt.Printf("After DNG:\n %s\n", bve.Formula().Brief())
 
 		return nil, bve.Formula()
 	}
