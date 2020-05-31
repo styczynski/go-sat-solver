@@ -130,5 +130,5 @@ func ConvertToCNFTseytins(formula sat_solver.Entry) (error, *sat_solver.SATFormu
 	if err != nil {
 		return err, nil
 	}
-	return nil, sat_solver.NewSATFormula(cnfFormula, vars)
+	return nil, sat_solver.NewSATFormula(cnfFormula, vars, nil)
 }

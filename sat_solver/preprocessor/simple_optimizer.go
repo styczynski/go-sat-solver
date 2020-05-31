@@ -106,7 +106,7 @@ func (opt *SimpleOptimizer) Formula() *sat_solver.SATFormula {
 		newFormula.Variables[i] = newClause
 		i++
 	}
-	return sat_solver.NewSATFormula(&newFormula, opt.vars)
+	return sat_solver.NewSATFormula(&newFormula, opt.vars, nil)
 }
 
 func (opt *SimpleOptimizer) notEqual(clause *Clause, clause2 *Clause) bool {
@@ -715,15 +715,17 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 	if err != nil {
 		if v, ok := err.(*sat_solver.UnsatError); ok {
 			f := bve.Formula()
-			return nil, sat_solver.NewSATFormulaShortcut(f.Formula(), f.Variables(), v)
+			return nil, sat_solver.NewSATFormulaShortcut(f.Formula(), f.Variables(), nil, v)
 		}
 	}
 
-	bve.RemoveHiddenTautologies()
+	fmt.Printf("After main simplification:\n %s\n", bve.Formula().Brief())
 
-	fmt.Printf("Before CD: %s\n", bve.Formula().Brief())
+	bve.RemoveHiddenTautologies()
+	fmt.Printf("After RHT:\n %s\n", bve.Formula().Brief())
+
 	bve.DistributeClauses()
-	fmt.Printf("After CD: %s\n", bve.Formula().String())
+	fmt.Printf("After CD:\n %s\n", bve.Formula().Brief())
 
 	return nil, bve.Formula()
 }

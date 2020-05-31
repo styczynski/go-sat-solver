@@ -1,7 +1,5 @@
 package preprocessor
 
-import "fmt"
-
 /*
  * Eliminates x by clause distribution if the result has fewer clauses than the original
  * (after removing trivially satisfied clauses)
@@ -18,7 +16,6 @@ func (opt *SimpleOptimizer) tryDistributeClauses() bool {
 				for negClause := range opt.occur[-varID] {
 					len2 := len(negClause.vars)
 					if clause != negClause && !negClause.isDeleted && len2 > 0 {
-						fmt.Printf("Combined clauses %s and %s ", clause.String(opt), negClause.String(opt))
 						opt.removeClause(negClause)
 						if len1 == 1 && len1 + len2 - 2 != 1 {
 							delete(opt.singular, clause)
@@ -64,7 +61,6 @@ func (opt *SimpleOptimizer) tryDistributeClauses() bool {
 						}
 						opt.validateState()
 
-						fmt.Printf("into %s\n", clause.String(opt))
 						return true
 					}
 				}

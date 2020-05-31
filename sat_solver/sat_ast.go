@@ -10,32 +10,38 @@ type SATFormula struct {
 	formula *CNFFormula
 	vars *SATVariableMapping
 	err *UnsatError
+	stats *SATFormulaStatistics
 }
 
 type SATFormulaStatistics struct {
 	variableCount int64
 	clauseCount int64
-	shortestClause int64
-	longestClause int64
+	clauseLenSum int64
+}
+
+func (stats SATFormulaStatistics) Score() float64 {
+	return float64(stats.clauseCount) + math.Exp(float64(stats.variableCount)/100)/4 + 5 * float64(stats.clauseLenSum) / float64(stats.clauseCount)
 }
 
 func (stats SATFormulaStatistics) String() string {
-	return fmt.Sprintf("(formula stats: #clauses=%d, #vars=%d, max(|clause|)=%d min(|clause|)=%d)",
-		stats.clauseCount, stats.variableCount, stats.shortestClause, stats.longestClause)
+	return fmt.Sprintf("score=%.0f, #clauses=%d, #vars=%d, avg(|clause|)=%.2f",
+		stats.Score(), stats.clauseCount, stats.variableCount, float64(stats.clauseLenSum) / float64(stats.clauseCount) )
 }
 
-func NewSATFormulaShortcut(formula *CNFFormula, vars *SATVariableMapping, unsatError *UnsatError) *SATFormula {
+func NewSATFormulaShortcut(formula *CNFFormula, vars *SATVariableMapping, stats *SATFormulaStatistics, unsatError *UnsatError) *SATFormula {
 	return &SATFormula{
 		formula: formula,
 		vars:    vars,
 		err: unsatError,
+		stats: stats,
 	}
 }
 
-func NewSATFormula(formula *CNFFormula, vars *SATVariableMapping) *SATFormula {
+func NewSATFormula(formula *CNFFormula, vars *SATVariableMapping, stats *SATFormulaStatistics) *SATFormula {
 	return &SATFormula{
 		formula: formula,
 		vars:    vars,
+		stats: stats,
 	}
 }
 
@@ -59,11 +65,20 @@ func (f *SATFormula) Formula() *CNFFormula {
 	return f.formula
 }
 
-func (f *SATFormula) Measure() SATFormulaStatistics {
+func (f *SATFormula) Stats() SATFormulaStatistics {
+	if f.stats == nil {
+		s := f.measure()
+		f.stats = &s
+	}
+	return *f.stats
+}
+
+func (f *SATFormula) measure() SATFormulaStatistics {
 	varIDs := map[int64]struct{}{}
 	clauseCount := int64(len(f.formula.Variables))
 	longestClause := int64(0)
 	shortestClause := int64(math.MaxInt64)
+	clauseLenSum := int64(0)
 	for _, clause := range f.formula.Variables {
 		l := int64(len(clause))
 		if l > longestClause {
@@ -72,6 +87,7 @@ func (f *SATFormula) Measure() SATFormulaStatistics {
 		if l < shortestClause {
 			shortestClause = l
 		}
+		clauseLenSum += l
 		for _, varID := range clause {
 			if varID > 0 {
 				varIDs[varID] = struct{}{}
@@ -87,8 +103,7 @@ func (f *SATFormula) Measure() SATFormulaStatistics {
 	return SATFormulaStatistics{
 		variableCount: varCount,
 		clauseCount: clauseCount,
-		shortestClause: shortestClause,
-		longestClause: longestClause,
+		clauseLenSum: clauseLenSum,
 	}
 }
 
@@ -117,7 +132,7 @@ func (f *SATFormula) Brief() string {
 	if f.err != nil {
 		return fmt.Sprintf("UNSAT Formula: %s", f.err.Error())
 	}
-	return f.Measure().String()
+	return f.Stats().String()
 }
 
 func (f *SATFormula) String() string {

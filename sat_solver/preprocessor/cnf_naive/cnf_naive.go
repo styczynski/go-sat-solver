@@ -130,5 +130,6 @@ func ConvertToCNFNaive(formula sat_solver.Entry) (error, *sat_solver.SATFormula)
 	if err != nil {
 		return err, nil
 	}
-	return nil, sat_solver.NewSATFormula(cnfFormula, vars)
+
+	return nil, sat_solver.NewSATFormula(cnfFormula, vars, nil)
 }
