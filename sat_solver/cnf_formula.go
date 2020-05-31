@@ -2,7 +2,9 @@ package sat_solver
 
 import (
 	"fmt"
+	"io"
 	"math"
+	"os"
 	"strings"
 )
 
@@ -189,6 +191,69 @@ func (f *CNFFormula) Measure() *SATFormulaStatistics {
 		clauseDepth:      2,
 		clauseComplexity: clauseLenSum,
 	}
+}
+
+func (f *CNFFormula) SaveDIMACSCNF(writer io.Writer) error {
+	vars := make([][]int, len(f.Variables))
+	variableRemap := map[int64]int{}
+	freeID := 1
+	for i, clause := range f.Variables {
+		vars[i] = make([]int, len(clause))
+		for j, v := range clause {
+			if v == 1 || v == -1 || v == 0 {
+				return fmt.Errorf("CNF formula cannot contain T/F.")
+			}
+			if v < 0 {
+				if k, ok := variableRemap[-v]; ok {
+					vars[i][j] = -k
+				} else {
+					variableRemap[-v] = freeID
+					vars[i][j] = -freeID
+					freeID++
+				}
+			} else {
+				if k, ok := variableRemap[v]; ok {
+					vars[i][j] = k
+				} else {
+					variableRemap[v] = freeID
+					vars[i][j] = freeID
+					freeID++
+				}
+			}
+		}
+	}
+	_, err := writer.Write([]byte(fmt.Sprintf("p cnf %d %d\n", len(variableRemap), len(vars))))
+	if err != nil {
+		return err
+	}
+	for _, clause := range vars {
+		for _, v := range clause {
+			if v == 0 {
+				return fmt.Errorf("Detected 0 during converting to CNF file format.")
+			}
+			_, err = writer.Write([]byte(fmt.Sprintf("%d ", v)))
+			if err != nil {
+				return err
+			}
+		}
+		_, err = writer.Write([]byte("0\n"))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (f *CNFFormula) SaveDIMACSCNFToFile(filePath string) error {
+	outputFile, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	err = f.SaveDIMACSCNF(outputFile)
+	if err != nil {
+		return err
+	}
+	return outputFile.Close()
 }
 
 func (f *CNFFormula) String(vars *SATVariableMapping) string {

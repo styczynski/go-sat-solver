@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-sat-solver/sat_solver"
 	"github.com/go-sat-solver/sat_solver/preprocessor/cnf_tseytins"
+	"github.com/go-sat-solver/sat_solver/test_utils"
 )
 
 func PreprocessAST(formula *sat_solver.Formula) (error, *sat_solver.SATFormula) {
@@ -13,6 +14,8 @@ func PreprocessAST(formula *sat_solver.Formula) (error, *sat_solver.SATFormula) 
 	if err != nil {
 		return err, nil
 	}
+
+	test_utils.AssertSatResult(satFormula, false)
 
 	fmt.Printf("Preprocessed formula:\n %s\n", satFormula.Brief())
 

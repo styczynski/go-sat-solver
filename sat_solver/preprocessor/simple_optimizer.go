@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-sat-solver/sat_solver"
+	"github.com/go-sat-solver/sat_solver/test_utils"
 )
 
 func hashVarID(varID int64) int64 {
@@ -520,7 +521,7 @@ func (opt *SimpleOptimizer) propagateToplevel() {
 }
 
 func (opt *SimpleOptimizer) cleanup() error {
-	//return nil
+	return nil
 	for {
 		err, r1 := opt.tryPerformUnitPropagation()
 		if err != nil {
@@ -573,6 +574,7 @@ func (opt *SimpleOptimizer) simplify() error {
 	 */
 	opt.strenghtened = map[*Clause]struct{}{}
 
+	return nil
 	for {
 		// Subsumption
 
@@ -772,8 +774,13 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 
 		fmt.Printf("After main simplification:\n %s\n", bve.Formula().Brief())
 
-		//bve.RemoveHiddenTautologies()
-		fmt.Printf("After RHT:\n %s\n", bve.Formula().Brief())
+		test_utils.AssertSatResult(bve.Formula(), false)
+
+		bve.PerformUnitPropagation()
+		bve.RemoveHiddenTautologies()
+		fmt.Printf("After RHT:\n %s\n", bve.Formula().String())
+
+		test_utils.AssertSatResult(bve.Formula(), false)
 
 		//bve.DistributeClauses()
 		//fmt.Printf("After CD:\n %s\n", bve.Formula().String())

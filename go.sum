@@ -9,10 +9,14 @@ github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c h1:MVVbswUlqicyj8P
 github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c/go.mod h1:xTS7Pm1pD1mvyM075QCDSRqH6qRLXylzS24ZTpRiSzQ=
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d h1:U+s90UTSYgptZMwQh2aRr3LuazLJIa+Pg3Kc1ylSYVY=
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
+github.com/crillab/gophersat v1.3.1 h1:l4fgnEMmy1+b7pn3nvPwj1ja3Z9MgXE4hUIl9TU8v+M=
+github.com/crillab/gophersat v1.3.1/go.mod h1:S91tHga1PCZzYhCkStwZAhvp1rCc+zqtSi55I+vDWGc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG+4E0Y=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
+github.com/mitchellh/go-sat v0.0.0-20170303184941-fc0e735aff48 h1:8CNgGrAIPfSd8voJ/GFH05W5fIMBVyk+14/hkmJKq0c=
+github.com/mitchellh/go-sat v0.0.0-20170303184941-fc0e735aff48/go.mod h1:uhXhhEl/JXgTGt2Cj472ZC62RrS5hfsTMymq2YFvHqc=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
