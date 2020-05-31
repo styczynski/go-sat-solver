@@ -411,7 +411,11 @@ func (opt *SimpleOptimizer) tryRemoveHiddenTautologies() bool {
 	return false
 }
 
-func (opt *SimpleOptimizer) optimizeTrivialTautologies() bool {
+func (opt *SimpleOptimizer) OptimizeTrivialTautologies() {
+	for opt.tryOptimizeTrivialTautologies() {}
+}
+
+func (opt *SimpleOptimizer) tryOptimizeTrivialTautologies() bool {
 	detectedChange := false
 	for c := range opt.clauses {
 		for v := range c.vars {
@@ -425,7 +429,21 @@ func (opt *SimpleOptimizer) optimizeTrivialTautologies() bool {
 	return detectedChange
 }
 
-func (opt *SimpleOptimizer) performUnitPropagation() (error, bool) {
+
+func (opt *SimpleOptimizer) PerformUnitPropagation() error {
+	for {
+		err, cont := opt.tryPerformUnitPropagation()
+		if err != nil {
+			return err
+		}
+		if !cont {
+			 break
+		}
+	}
+	return nil
+}
+
+func (opt *SimpleOptimizer) tryPerformUnitPropagation() (error, bool) {
 
 	varToRemove := int64(0)
 	for c := range opt.singular {
@@ -502,12 +520,13 @@ func (opt *SimpleOptimizer) propagateToplevel() {
 }
 
 func (opt *SimpleOptimizer) cleanup() error {
+	//return nil
 	for {
-		err, r1 := opt.performUnitPropagation()
+		err, r1 := opt.tryPerformUnitPropagation()
 		if err != nil {
 			return err
 		}
-		r2 := opt.optimizeTrivialTautologies()
+		r2 := opt.tryOptimizeTrivialTautologies()
 		r3 := opt.blockedClauseElimination()
 		//r4 := opt.tryRemoveDanglingVariables()
 		if !r1 && !r2 && !r3 { //&& !r4 {
