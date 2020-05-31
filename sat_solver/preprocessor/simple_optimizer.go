@@ -658,74 +658,79 @@ func (opt *SimpleOptimizer) blockedClauseElimination() bool {
 }
 
 func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
-	f := formula.Formula()
-	hashVal := int64(0)
+	formRepr := formula.Formula()
+	if f, ok := formRepr.(*sat_solver.CNFFormula); ok {
 
-	bve := SimpleOptimizer{
-		clauses:   map[*Clause]struct{}{},
-		occur:     map[int64]map[*Clause]struct{}{},
-		occurBi:   map[int64]map[*Clause]struct{}{},
-		vars:      formula.Variables(),
-	}
+		hashVal := int64(0)
 
-	for _, clause := range f.Variables {
-		clauseVars := map[int64]struct{}{}
-		for _, v := range clause {
-			clauseVars[v] = struct{}{}
+		bve := SimpleOptimizer{
+			clauses: map[*Clause]struct{}{},
+			occur:   map[int64]map[*Clause]struct{}{},
+			occurBi: map[int64]map[*Clause]struct{}{},
+			vars:    formula.Variables(),
 		}
 
-		c := &Clause{
-			vars: clauseVars,
-			isDeleted: false,
-		}
-		hashVal = 0
-		for _, v := range clause {
-			hashVal = hashVal | hashVarID(v)
-			if _, ok := bve.occur[v]; ok {
-				bve.occur[v][c] = struct{}{}
-			} else {
-				bve.occur[v] = map[*Clause]struct{}{
-					c: {},
-				}
-			}
-			if _, ok := bve.occur[-v]; !ok {
-				bve.occur[-v] = map[*Clause]struct{}{}
-			}
-		}
-		if len(c.vars) == 2 {
+		for _, clause := range f.Variables {
+			clauseVars := map[int64]struct{}{}
 			for _, v := range clause {
-				if _, ok := bve.occurBi[v]; ok {
-					bve.occurBi[v][c] = struct{}{}
+				clauseVars[v] = struct{}{}
+			}
+
+			c := &Clause{
+				vars:      clauseVars,
+				isDeleted: false,
+			}
+			hashVal = 0
+			for _, v := range clause {
+				hashVal = hashVal | hashVarID(v)
+				if _, ok := bve.occur[v]; ok {
+					bve.occur[v][c] = struct{}{}
 				} else {
-					bve.occurBi[v] = map[*Clause]struct{}{
+					bve.occur[v] = map[*Clause]struct{}{
 						c: {},
 					}
 				}
-				if _, ok := bve.occurBi[-v]; !ok {
-					bve.occurBi[-v] = map[*Clause]struct{}{}
+				if _, ok := bve.occur[-v]; !ok {
+					bve.occur[-v] = map[*Clause]struct{}{}
 				}
+			}
+			if len(c.vars) == 2 {
+				for _, v := range clause {
+					if _, ok := bve.occurBi[v]; ok {
+						bve.occurBi[v][c] = struct{}{}
+					} else {
+						bve.occurBi[v] = map[*Clause]struct{}{
+							c: {},
+						}
+					}
+					if _, ok := bve.occurBi[-v]; !ok {
+						bve.occurBi[-v] = map[*Clause]struct{}{}
+					}
+				}
+			}
+
+			c.hash = hashVal
+			bve.clauses[c] = struct{}{}
+		}
+
+		err := bve.simplify()
+		if err != nil {
+			if v, ok := err.(*sat_solver.UnsatError); ok {
+				f := bve.Formula()
+				return nil, sat_solver.NewSATFormulaShortcut(f.Formula(), f.Variables(), nil, v)
 			}
 		}
 
-		c.hash = hashVal
-		bve.clauses[c] = struct{}{}
+		fmt.Printf("After main simplification:\n %s\n", bve.Formula().Brief())
+
+		bve.RemoveHiddenTautologies()
+		fmt.Printf("After RHT:\n %s\n", bve.Formula().Brief())
+
+		bve.DistributeClauses()
+		fmt.Printf("After CD:\n %s\n", bve.Formula().Brief())
+
+		return nil, bve.Formula()
 	}
 
-	err := bve.simplify()
-	if err != nil {
-		if v, ok := err.(*sat_solver.UnsatError); ok {
-			f := bve.Formula()
-			return nil, sat_solver.NewSATFormulaShortcut(f.Formula(), f.Variables(), nil, v)
-		}
-	}
-
-	fmt.Printf("After main simplification:\n %s\n", bve.Formula().Brief())
-
-	bve.RemoveHiddenTautologies()
-	fmt.Printf("After RHT:\n %s\n", bve.Formula().Brief())
-
-	bve.DistributeClauses()
-	fmt.Printf("After CD:\n %s\n", bve.Formula().Brief())
-
-	return nil, bve.Formula()
+	return fmt.Errorf("Optimize() cannot handle non-CNF formulas."), nil
 }
