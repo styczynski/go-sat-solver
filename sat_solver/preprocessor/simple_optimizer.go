@@ -67,7 +67,7 @@ func (c *Clause) String(bve *SimpleOptimizer) string {
 	for v := range c.vars {
 		strs = append(strs, bve.vars.Reverse(v))
 	}
-	return fmt.Sprintf("[%s]", strings.Join(strs, " v "))
+	return fmt.Sprintf("[%s]<%#v>", strings.Join(strs, " v "), c.isDeleted)
 }
 
 func (c *Clause) Rehash() {
@@ -202,6 +202,7 @@ func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) error {
 
 	len1 := len(clause.vars)
 
+	// Remove var from the clause
 	delete(clause.vars, varID)
 	delete(opt.occur[varID], clause)
 	clause.Rehash()
@@ -212,6 +213,7 @@ func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) error {
 		for v := range clause.vars {
 			delete(opt.occurBi[v], clause)
 		}
+		delete(opt.occurBi[varID], clause)
 	} else if len1 > 2 && len2 == 2 {
 		for v := range clause.vars {
 			if _, ok := opt.occurBi[v]; !ok {
@@ -243,6 +245,7 @@ func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) error {
 	//}
 
 	//fmt.Printf("Strengthen result: %s\n", clause.String(opt))
+	opt.validateState()
 	return nil
 }
 
@@ -263,6 +266,8 @@ func (opt *SimpleOptimizer) removeClause(clause *Clause) {
 	for v := range clause.vars {
 		opt.touched[v] = struct{}{}
 	}
+
+	opt.validateState()
 }
 
 // Remove any clause subsumed by the first argument
@@ -273,18 +278,105 @@ func (opt *SimpleOptimizer) subsume(clause *Clause) {
 	}
 }
 
-func (opt *SimpleOptimizer) removeHiddenTautologies() bool {
+func (opt *SimpleOptimizer) RemoveHiddenTautologies() bool {
+	for opt.tryRemoveHiddenTautologies() {}
+	return false
+}
+
+func (opt *SimpleOptimizer) validateState() {
+	return
+	err := opt.checkIfStateIsValid()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (opt *SimpleOptimizer) checkIfStateIsValid() error {
+
+	validOccur := map[int64]map[*Clause]struct{}{}
+	validOccurBi := map[int64]map[*Clause]struct{}{}
+	validSingular := map[*Clause]struct{}{}
+
+	// Check clauses
+	for c := range opt.clauses {
+		if !c.isDeleted {
+			for v := range c.vars {
+				if _, ok := opt.occur[v][c]; !ok {
+					return fmt.Errorf("Variable %s occurs in %s but is not present in occur set.", opt.vars.Reverse(v), c.String(opt))
+				} else {
+					if _, ok := validOccur[v]; !ok {
+						validOccur[v] = map[*Clause]struct{}{}
+					}
+					validOccur[v][c] = struct{}{}
+				}
+			}
+			if len(c.vars) == 2 {
+				for v := range c.vars {
+					if _, ok := opt.occurBi[v][c]; !ok {
+						return fmt.Errorf("Variable %s occurs in binary clause %s but is not present in occurBi set.", opt.vars.Reverse(v), c.String(opt))
+					} else {
+						if _, ok := validOccurBi[v]; !ok {
+							validOccurBi[v] = map[*Clause]struct{}{}
+						}
+						validOccurBi[v][c] = struct{}{}
+					}
+				}
+			}
+			if len(c.vars) == 1 {
+				if _, ok := opt.singular[c]; !ok {
+					return fmt.Errorf("Clause %s is a unit clause but is not present in singular set.", c.String(opt))
+				} else {
+					validSingular[c] = struct{}{}
+				}
+			}
+		}
+	}
+
+	for v := range opt.occur {
+		for c := range opt.occur[v] {
+			if _, ok := validOccur[v][c]; !ok {
+				return fmt.Errorf("Variable %s is not present in cluase %s but it's present in the occur set.", opt.vars.Reverse(v), c.String(opt))
+			}
+		}
+	}
+
+	for v := range opt.occurBi {
+		for c := range opt.occurBi[v] {
+			if _, ok := validOccurBi[v][c]; !ok {
+				return fmt.Errorf("Variable %s is not present in binary cluase %s but it's present in the occurBi set.", opt.vars.Reverse(v), c.String(opt))
+			}
+		}
+	}
+
+	for c := range opt.singular {
+		if _, ok := validSingular[c]; !ok {
+			return fmt.Errorf("Clause %s is not a unit clause but is present in the singular set.", c.String(opt))
+		}
+	}
+
+	return nil
+}
+
+func (opt *SimpleOptimizer) tryRemoveHiddenTautologies() bool {
 	for v, vBiClauses := range opt.occurBi {
 		for c := range vBiClauses {
 			if len(c.vars) == 2 {
+				// c is clause [v, v2]
 				for v2 := range c.vars {
 					if v != v2 {
+						// Now look for c2 - clause with -v2
 						for c2 := range opt.occurBi[-v2] {
 							if c != c2 && len(c2.vars) == 2 {
 								for v3 := range c2.vars {
+									// c2 is clause [-v2, v3]
 									if v3 != -v2 {
+										// c  = [v,   v2]
+										// c2 = [-v2, v3]
+
 										// We remove c and c2 and replace them with [v, v3] clause
 										opt.removeClause(c2)
+
+										// Remove v2 from c and replace it with v3
 										delete(opt.occurBi[v2], c)
 										delete(opt.occur[v2], c)
 										c.vars = map[int64]struct{}{
@@ -292,7 +384,9 @@ func (opt *SimpleOptimizer) removeHiddenTautologies() bool {
 										}
 										opt.occurBi[v3][c] = struct{}{}
 										opt.occur[v3][c] = struct{}{}
+
 										c.Rehash()
+										opt.validateState()
 										return true
 									}
 								}
@@ -380,14 +474,6 @@ func (opt *SimpleOptimizer) maybeEliminate(varID int64) {
 }
 
 func (opt *SimpleOptimizer) propagateToplevel() {
-	// TODO: Implement
-}
-
-/*
- * Eliminates x by clause distribution if the result has fewer clauses than the original
- * (after removing trivially satisfied clauses)
- */
-func(opt *SimpleOptimizer) maybeClauseDistribute(varID int64) {
 	// TODO: Implement
 }
 
@@ -633,7 +719,11 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 		}
 	}
 
-	for bve.removeHiddenTautologies() {}
+	bve.RemoveHiddenTautologies()
+
+	fmt.Printf("Before CD: %s\n", bve.Formula().Brief())
+	bve.DistributeClauses()
+	fmt.Printf("After CD: %s\n", bve.Formula().String())
 
 	return nil, bve.Formula()
 }
