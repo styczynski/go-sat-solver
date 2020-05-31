@@ -14,6 +14,34 @@ type CNFFormula struct {
 	Variables [][]int64
 }
 
+func (f *CNFFormula) AST(vars *SATVariableMapping) *Formula {
+	var currentRet *Formula = nil
+	for _, clause := range f.Variables {
+		var currentClause *Formula = nil
+		for _, v := range clause {
+			if currentClause == nil {
+				if v < 0 {
+					currentClause = MakeNot(MakeVar(vars.Reverse(v)))
+				} else {
+					currentClause = MakeVar(vars.Reverse(v))
+				}
+			} else {
+				if v < 0 {
+					currentClause = MakeOr(currentClause, MakeNot(MakeVar(vars.Reverse(v))))
+				} else {
+					currentClause = MakeOr(currentClause, MakeVar(vars.Reverse(v)))
+				}
+			}
+		}
+		if currentRet == nil {
+			currentRet = currentClause
+		} else {
+			currentRet = MakeAnd(currentRet, currentClause)
+		}
+	}
+	return currentRet
+}
+
 type UnsatReasonCNFNormalization struct {}
 
 func NewUnsatReasonCNFNormalization() *UnsatReasonCNFNormalization {
@@ -155,9 +183,11 @@ func (f *CNFFormula) Measure() *SATFormulaStatistics {
 		varCount++
 	}
 	return &SATFormulaStatistics{
-		variableCount: varCount,
-		clauseCount: clauseCount,
-		clauseLenSum: clauseLenSum,
+		variableCount:    varCount,
+		clauseCount:      clauseCount,
+		clauseLenSum:     clauseLenSum,
+		clauseDepth:      2,
+		clauseComplexity: clauseLenSum,
 	}
 }
 

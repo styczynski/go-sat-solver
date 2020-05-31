@@ -14,7 +14,6 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 			Or:  nil,
 			Variable: &sat_solver.NWFVar{
 				ID:    v,
-				IsNeg: false,
 			},
 		}
 	} else if expr.Not != nil {
@@ -35,7 +34,7 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 			return err, nil
 		}
 
-		return nil, &sat_solver.NWFFormula{
+		return nil, (&sat_solver.NWFFormula{
 			And: nil,
 			Or: &sat_solver.NWFOr{
 				Arg1:  e1,
@@ -43,7 +42,7 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 				IsNeg: false,
 			},
 			Variable: nil,
-		}
+		}).UpdateTopNodeMetrics()
 	} else if expr.And != nil {
 		err, e1 := convert(expr.And.Arg1, vars)
 		if err != nil {
@@ -55,13 +54,13 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 			return err, nil
 		}
 
-		return nil, &sat_solver.NWFFormula{
+		return nil, (&sat_solver.NWFFormula{
 			And: &sat_solver.NWFAnd{
 				Arg1:  e1,
 				Arg2:  e2,
 				IsNeg: false,
 			},
-		}
+		}).UpdateTopNodeMetrics()
 	} else if expr.Constant != nil {
 		if expr.Constant.Bool == "T" {
 			return nil, &sat_solver.NWFFormula{
@@ -88,7 +87,7 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 		}
 		e1.Negate()
 
-		return nil, &sat_solver.NWFFormula{
+		return nil, (&sat_solver.NWFFormula{
 			And:      nil,
 			Or:       &sat_solver.NWFOr{
 				Arg1:  e1,
@@ -96,7 +95,7 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 				IsNeg: false,
 			},
 			Variable: nil,
-		}
+		}).UpdateTopNodeMetrics()
 	} else if expr.Iff != nil {
 		err, e1 := convert(expr.Iff.Arg1, vars)
 		if err != nil {
@@ -107,14 +106,14 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 		if err != nil {
 			return err, nil
 		}
-		ne1 := &(*e1)
+		ne1 := e1.Copy()
 		ne1.Negate()
-		ne2 := &(*e2)
+		ne2 := e2.Copy()
 		ne2.Negate()
 
-		return nil, &sat_solver.NWFFormula{
+		return nil, (&sat_solver.NWFFormula{
 			And: &sat_solver.NWFAnd{
-				Arg1: &sat_solver.NWFFormula{
+				Arg1: (&sat_solver.NWFFormula{
 					And:      nil,
 					Or:       &sat_solver.NWFOr{
 						Arg1:  ne1,
@@ -122,8 +121,8 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 						IsNeg: false,
 					},
 					Variable: nil,
-				},
-				Arg2: &sat_solver.NWFFormula{
+				}).UpdateTopNodeMetrics(),
+				Arg2: (&sat_solver.NWFFormula{
 					And:      nil,
 					Or:       &sat_solver.NWFOr{
 						Arg1:  ne2,
@@ -131,22 +130,206 @@ func convert(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping) (err
 						IsNeg: false,
 					},
 					Variable: nil,
-				},
+				}).UpdateTopNodeMetrics(),
 				IsNeg: false,
 			},
 			Or:       nil,
 			Variable: nil,
-		}
+		}).UpdateTopNodeMetrics()
 	}
 
 	return fmt.Errorf("NWF Could not convert unknown boolean expression."), nil
 }
 
-func ConvertToNWF(formula sat_solver.Entry) (error, *sat_solver.SATFormula) {
+func optimizeTree(formula *sat_solver.NWFFormula, changeDetected *bool) (error, *sat_solver.NWFFormula) {
+	if formula.Or != nil {
+		err, opt1 := optimizeTree(formula.Or.Arg1, changeDetected)
+		if err != nil {
+			return err, nil
+		}
+		err, opt2 := optimizeTree(formula.Or.Arg2, changeDetected)
+		if err != nil {
+			return err, nil
+		}
+		if opt1.Const != nil && opt2.Const != nil {
+			*changeDetected = true
+			return nil, &sat_solver.NWFFormula{
+				Const: &sat_solver.NWFConst{
+					Value: (opt1.Const.Value || opt2.Const.Value) != formula.Or.IsNeg,
+				},
+			}
+		}
+		if opt1.Const != nil {
+			if opt1.Const.Value && !formula.Or.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: true,
+					},
+				}
+			} else if opt1.Const.Value && formula.Or.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: false,
+					},
+				}
+			} else if !opt1.Const.Value {
+				*changeDetected = true
+				if formula.Or.IsNeg {
+					opt2.Negate()
+				}
+				return nil, opt2
+			}
+		}
+		if opt2.Const != nil {
+			if opt2.Const.Value && !formula.Or.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: true,
+					},
+				}
+			} else if opt2.Const.Value && formula.Or.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: false,
+					},
+				}
+			} else if !opt2.Const.Value {
+				*changeDetected = true
+				if formula.Or.IsNeg {
+					opt1.Negate()
+				}
+				return nil, opt1
+			}
+		}
+
+		_, opt1complex := opt1.NodeMetrics()
+		_, opt2complex := opt2.NodeMetrics()
+		if opt1complex + opt2complex <= 30 {
+			// This is expensive
+			opt1s := opt1.Serialize()
+			opt2s := opt1.Serialize()
+			//fmt.Printf("collapse %s and %s (%d vs %d)\n", opt1s, opt2s, opt1complex, opt2complex)
+			if opt1s == opt2s {
+				*changeDetected = true
+				return nil, opt1.UpdateTopNodeMetrics()
+			}
+		}
+
+		return nil, (&sat_solver.NWFFormula{
+			Or: &sat_solver.NWFOr{
+				Arg1:  opt1,
+				Arg2:  opt2,
+				IsNeg: formula.Or.IsNeg,
+			},
+		}).UpdateTopNodeMetrics()
+	} else if formula.And != nil {
+		err, opt1 := optimizeTree(formula.And.Arg1, changeDetected)
+		if err != nil {
+			return err, nil
+		}
+		err, opt2 := optimizeTree(formula.And.Arg2, changeDetected)
+		if err != nil {
+			return err, nil
+		}
+		if opt1.Const != nil && opt2.Const != nil {
+			*changeDetected = true
+			return nil, &sat_solver.NWFFormula{
+				Const: &sat_solver.NWFConst{
+					Value: (opt1.Const.Value && opt2.Const.Value) != formula.And.IsNeg,
+				},
+			}
+		}
+		if opt1.Const != nil {
+			if !opt1.Const.Value && !formula.And.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: false,
+					},
+				}
+			} else if !opt1.Const.Value && formula.And.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: true,
+					},
+				}
+			} else if opt1.Const.Value {
+				*changeDetected = true
+				if formula.And.IsNeg {
+					opt2.Negate()
+				}
+				return nil, opt2
+			}
+		}
+		if opt2.Const != nil {
+			if !opt2.Const.Value && !formula.And.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: false,
+					},
+				}
+			} else if opt2.Const.Value && formula.And.IsNeg {
+				*changeDetected = true
+				return nil, &sat_solver.NWFFormula{
+					Const: &sat_solver.NWFConst{
+						Value: true,
+					},
+				}
+			} else if opt2.Const.Value {
+				*changeDetected = true
+				if formula.And.IsNeg {
+					opt1.Negate()
+				}
+				return nil, opt1
+			}
+		}
+
+		_, opt1complex := opt1.NodeMetrics()
+		_, opt2complex := opt2.NodeMetrics()
+		if opt1complex + opt2complex <= 30 {
+			// This is expensive
+			opt1s := opt1.Serialize()
+			opt2s := opt1.Serialize()
+			//fmt.Printf("collapse %s and %s (%d vs %d)\n", opt1s, opt2s, opt1complex, opt2complex)
+			if opt1s == opt2s {
+				*changeDetected = true
+				return nil, opt1.UpdateTopNodeMetrics()
+			}
+		}
+
+		return nil, (&sat_solver.NWFFormula{
+			And: &sat_solver.NWFAnd{
+				Arg1:  opt1,
+				Arg2:  opt2,
+				IsNeg: formula.And.IsNeg,
+			},
+		}).UpdateTopNodeMetrics()
+	}
+	return nil, formula
+}
+
+func ConvertToNWF(formula *sat_solver.Entry) (error, *sat_solver.SATFormula) {
 	vars := sat_solver.NewSATVariableMapping()
 	err, f := convert(formula.Formula, vars)
 	if err != nil {
 		return err, nil
 	}
-	return nil, sat_solver.NewSATFormula(f, vars, nil)
+	optF := f
+	for {
+		changeDetected := false
+		err, optF = optimizeTree(optF, &changeDetected)
+		if err != nil {
+			return err, nil
+		}
+		if !changeDetected {
+			break
+		}
+	}
+	return nil, sat_solver.NewSATFormula(optF, vars, nil)
 }

@@ -6,9 +6,8 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/go-sat-solver/sat_solver/core"
 	"github.com/go-sat-solver/sat_solver/parser"
-	"github.com/go-sat-solver/sat_solver/preprocessor"
-	"github.com/go-sat-solver/sat_solver/solver"
 )
 
 var (
@@ -25,9 +24,7 @@ func main() {
 		ctx.FatalIfErrorf(err)
 		err, ast := parser.ParseInputFormula(r)
 		ctx.FatalIfErrorf(err)
-		err, sat := preprocessor.PreprocessAST(*ast)
-		ctx.FatalIfErrorf(err)
-		err, result := solver.Solve(sat)
+		err, result := core.RunSATSolver(ast)
 		fmt.Printf("Result is:\n\n %t\n\n", result)
 		ctx.FatalIfErrorf(err)
 		err = r.Close()

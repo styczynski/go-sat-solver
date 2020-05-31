@@ -9,6 +9,8 @@ type SATFormulaStatistics struct {
 	variableCount int64
 	clauseCount int64
 	clauseLenSum int64
+	clauseDepth int64
+	clauseComplexity int64
 }
 
 func (stats SATFormulaStatistics) Score() float64 {

@@ -9,6 +9,7 @@ type FormulaRepresentation interface {
 	Evaluate(vars []bool) bool
 	Measure() *SATFormulaStatistics
 	String(vars *SATVariableMapping) string
+	AST(vars *SATVariableMapping) *Formula
 }
 
 type SATFormula struct {
@@ -35,6 +36,10 @@ func NewSATFormula(formula FormulaRepresentation, vars *SATVariableMapping, stat
 	}
 }
 
+func (f* SATFormula) AST() *Formula {
+	return f.formula.AST(f.vars)
+}
+
 func (f *SATFormula) Normalize() (error, []bool) {
 	err, newVars, varCount := f.formula.NormalizeVars(f.vars)
 	if err != nil {
@@ -46,18 +51,6 @@ func (f *SATFormula) Normalize() (error, []bool) {
 
 func (f * SATFormula) Evaluate(vars []bool) bool {
 	return f.formula.Evaluate(vars)
-}
-
-func trimVarQuotes(s string) string {
-	if len(s) >= 2 {
-		if s[0] == '[' && s[len(s)-1] == ']' {
-			return "var" + s[1: len(s)-1]
-		}
-		if s[0] == '"' && s[len(s)-1] == '"' {
-			return s[1 : len(s)-1]
-		}
-	}
-	return s
 }
 
 func (f *SATFormula) Variables() *SATVariableMapping {

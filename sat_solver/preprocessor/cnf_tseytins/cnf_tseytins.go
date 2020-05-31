@@ -112,10 +112,10 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 	return fmt.Errorf("Invalid formula given to convertToCnf: %#v", expr), nil, false
 }
 
-func ConvertToCNFTseytins(formula sat_solver.Entry) (error, *sat_solver.SATFormula) {
+func ConvertToCNFTseytins(formula *sat_solver.Formula) (error, *sat_solver.SATFormula) {
 	vars := sat_solver.NewSATVariableMapping()
 	ts := []*sat_solver.Formula{}
-	err, f, _ := convertToCnf(formula.Formula, vars, &ts)
+	err, f, _ := convertToCnf(formula, vars, &ts)
 	if err != nil {
 		return err, nil
 	}
@@ -123,8 +123,8 @@ func ConvertToCNFTseytins(formula sat_solver.Entry) (error, *sat_solver.SATFormu
 	// Add subsitution for the entire formula
 	ts = append(ts, f)
 
-	fmt.Printf("Tseytins input formula:\n %s\n", formula.Formula.String())
-	fmt.Printf("Tseytins output chain:\n %s\n", sat_solver.AndChainToString(ts))
+	//fmt.Printf("Tseytins input formula:\n %s\n", formula.String())
+	//fmt.Printf("Tseytins output chain:\n %s\n", sat_solver.AndChainToString(ts))
 
 	err, cnfFormula := cnf_naive.ConvertToCnfAndChain(ts, vars)
 	if err != nil {

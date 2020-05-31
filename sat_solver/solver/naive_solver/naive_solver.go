@@ -14,12 +14,13 @@ func NewNaiveSolver() *NaiveSolver {
 }
 
 func (solver *NaiveSolver) Solve(formula *sat_solver.SATFormula) (error, bool) {
-	fmt.Printf("Naive solver input:\n %s\n", formula.String())
-
 	err, vars := formula.Normalize()
 	if err != nil {
 		return err, false
 	}
+
+	fmt.Printf("Naive solver input:\n %s\n", formula.String())
+
 
 	varCount := int64(len(vars))
 	values := int64(0)
@@ -30,7 +31,10 @@ func (solver *NaiveSolver) Solve(formula *sat_solver.SATFormula) (error, bool) {
 			vars[j] = (int64(1) >> j) & values != 0
 		}
 		if formula.Evaluate(vars) {
-			fmt.Printf("Naive solution:\n %#v\n", vars)
+			fmt.Printf("Naive solution:\n")
+			for k, v := range vars {
+				fmt.Printf("  %s = %t\n", formula.Variables().Reverse(int64(k+1)), v)
+			}
 			return nil, true
 		}
 		values++
