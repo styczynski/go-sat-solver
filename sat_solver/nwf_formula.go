@@ -16,6 +16,9 @@ type NWFAnd struct {
 }
 
 func (f *NWFAnd) AST(vars *SATVariableMapping) *Formula {
+	if f.IsNeg {
+		return MakeNot(MakeAnd(f.Arg1.AST(vars), f.Arg2.AST(vars)))
+	}
 	return MakeAnd(f.Arg1.AST(vars), f.Arg2.AST(vars))
 }
 
@@ -70,6 +73,9 @@ type NWFOr struct {
 }
 
 func (f *NWFOr) AST(vars *SATVariableMapping) *Formula {
+	if f.IsNeg {
+		return MakeNot(MakeOr(f.Arg1.AST(vars), f.Arg2.AST(vars)))
+	}
 	return MakeOr(f.Arg1.AST(vars), f.Arg2.AST(vars))
 }
 
@@ -364,5 +370,6 @@ func (f *NWFFormula) Measure() *SATFormulaStatistics {
 		clauseLenSum:     0,
 		clauseDepth:      int64(d),
 		clauseComplexity: int64(c),
+		isCNF: false,
 	}
 }

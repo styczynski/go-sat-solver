@@ -144,6 +144,45 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 	return fmt.Errorf("Invalid formula given to convertToCnf: %#v", expr), 0, 0
 }
 
+func eliminateCNFTF(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
+	if v, ok := formula.Formula().(*sat_solver.CNFFormula); ok {
+		newVars := make([][]int64, 0, len(v.Variables))
+		for _, clause := range v.Variables {
+			if len(clause) == 0 {
+				return sat_solver.NewUnsatError(sat_solver.NewUnsatReasonCNFNormalization()), nil
+			}
+			newClause := make([]int64, 0, len(clause))
+			occursVariable := true
+			occursTrue := false
+			for _, varID := range clause {
+				if varID == 1 {
+					occursTrue = true
+				} else if varID == -1 {
+					// Do nothing
+				} else {
+					occursVariable = true
+					newClause = append(newClause, varID)
+				}
+			}
+
+			if !occursTrue {
+				if !occursVariable {
+					return sat_solver.NewUnsatError(sat_solver.NewUnsatReasonCNFNormalization()), nil
+				} else {
+					newVars = append(newVars, newClause)
+				}
+			}
+		}
+
+		res := sat_solver.NewSATFormula(&sat_solver.CNFFormula{
+			Variables: newVars,
+		}, formula.Variables(), nil)
+
+		return nil, res
+	}
+	return fmt.Errorf("Expected CNF formula."), nil
+}
+
 func ConvertToCNFTseytins(formula *sat_solver.Formula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
 	err, processID := context.StartProcessing("Convert to CNF using Tseytins transformation", "")
 	if err != nil {
@@ -157,7 +196,7 @@ func ConvertToCNFTseytins(formula *sat_solver.Formula, context *sat_solver.SATCo
 		return err, nil
 	}
 
-	// Add subsitution for the entire formula
+	// Add substitution for the entire formula
 	if topLevelVar != 0 {
 		ts = append(ts, []int64{ topLevelVar })
 	} else {
@@ -167,6 +206,10 @@ func ConvertToCNFTseytins(formula *sat_solver.Formula, context *sat_solver.SATCo
 	tseytinsCnf := sat_solver.NewSATFormula(&sat_solver.CNFFormula{
 		Variables: ts,
 	}, vars, nil)
+	err, tseytinsCnf = eliminateCNFTF(tseytinsCnf)
+	if err != nil {
+		return err, nil
+	}
 
 	err = context.EndProcessingFormula(processID, tseytinsCnf)
 	if err != nil {

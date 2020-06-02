@@ -190,6 +190,7 @@ func (f *CNFFormula) Measure() *SATFormulaStatistics {
 		clauseLenSum:     clauseLenSum,
 		clauseDepth:      2,
 		clauseComplexity: clauseLenSum,
+		isCNF: true,
 	}
 }
 

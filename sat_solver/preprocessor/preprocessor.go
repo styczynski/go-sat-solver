@@ -15,6 +15,9 @@ func PreprocessAST(formula *sat_solver.Formula, context *sat_solver.SATContext) 
 	if err != nil {
 		return err, nil
 	}
+	if satFormula.IsQuickUNSAT() {
+		return nil, satFormula
+	}
 	err = context.EndProcessingFormula(processID, satFormula)
 	if err != nil {
 		return err, nil

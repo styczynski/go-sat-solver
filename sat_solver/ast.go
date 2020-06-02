@@ -128,13 +128,13 @@ func MakeBoolConstant(value bool) *Formula {
 	if value {
 		return &Formula{
 			Constant: &BooleanConstant{
-				Bool: "F",
+				Bool: "T",
 			},
 		}
 	}
 	return &Formula{
 		Constant: &BooleanConstant{
-			Bool: "T",
+			Bool: "F",
 		},
 	}
 }
