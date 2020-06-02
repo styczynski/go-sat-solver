@@ -13,7 +13,7 @@ func NewNaiveSolver() *NaiveSolver {
 	return &NaiveSolver{}
 }
 
-func (solver *NaiveSolver) Solve(formula *sat_solver.SATFormula) (error, bool) {
+func (solver *NaiveSolver) Solve(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (error, bool) {
 	fmt.Printf("Naive solver input:\n %s\n", formula.String())
 
 	err, vars := formula.Normalize()

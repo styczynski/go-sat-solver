@@ -6,12 +6,12 @@ import (
 )
 
 type Solver interface {
-	Solve(formula *sat_solver.SATFormula) bool
+	Solve(formula *sat_solver.SATFormula, context *sat_solver.SATContext) bool
 }
 
-func Solve(formula *sat_solver.SATFormula) (error, bool) {
+func Solve(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (error, bool) {
 	solver := naive_solver.NewNaiveSolver()
-	err, result := solver.Solve(formula)
+	err, result := solver.Solve(formula, context)
 	if err != nil {
 		return err, false
 	}

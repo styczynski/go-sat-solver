@@ -28,7 +28,7 @@ func (f *NWFAnd) UpdateTopNodeMetrics() {
 		d = d2
 	}
 
-	f.Depth = d
+	f.Depth = d+1
 	f.Complexity = c1 + c2
 }
 
@@ -82,7 +82,7 @@ func (f *NWFOr) UpdateTopNodeMetrics() {
 		d = d2
 	}
 
-	f.Depth = d
+	f.Depth = d+1
 	f.Complexity = c1 + c2
 }
 

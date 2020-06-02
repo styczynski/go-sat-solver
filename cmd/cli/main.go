@@ -5,6 +5,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/go-sat-solver/sat_solver"
 	"github.com/go-sat-solver/sat_solver/core"
 )
 
@@ -17,7 +18,7 @@ var (
 func main() {
 	ctx := kong.Parse(&cli)
 	for _, file := range cli.Files {
-		err, result := core.RunSATSolverOnFilePath(file)
+		err, result := core.RunSATSolverOnFilePath(file, sat_solver.NewSATContextAssert(file, false))
 		ctx.FatalIfErrorf(err)
 		fmt.Printf("Result:\n  %d\n", result)
 	}

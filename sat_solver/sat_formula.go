@@ -65,6 +65,10 @@ func (f *SATFormula) Formula() FormulaRepresentation {
 	return f.formula
 }
 
+func (f *SATFormula) ToSATFormula() *SATFormula {
+	return f
+}
+
 func (f *SATFormula) Stats() SATFormulaStatistics {
 	if f.stats == nil {
 		f.stats = f.formula.Measure()

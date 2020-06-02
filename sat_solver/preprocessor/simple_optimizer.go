@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-sat-solver/sat_solver"
-	"github.com/go-sat-solver/sat_solver/test_utils"
 )
 
 func hashVarID(varID int64) int64 {
@@ -92,6 +91,7 @@ type SimpleOptimizer struct {
 	visitedUnits map[int64]struct{}
 
 	vars *sat_solver.SATVariableMapping
+	context *sat_solver.SATContext
 }
 
 func (opt *SimpleOptimizer) Formula() *sat_solver.SATFormula {
@@ -110,6 +110,10 @@ func (opt *SimpleOptimizer) Formula() *sat_solver.SATFormula {
 		i++
 	}
 	return sat_solver.NewSATFormula(&newFormula, opt.vars, nil)
+}
+
+func (opt *SimpleOptimizer) ToSATFormula() *sat_solver.SATFormula {
+	return opt.Formula()
 }
 
 func (opt *SimpleOptimizer) notEqual(clause *Clause, clause2 *Clause) bool {
@@ -701,7 +705,15 @@ func (opt *SimpleOptimizer) blockedClauseElimination() bool {
 	return changeDetected
 }
 
-func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
+func (opt *SimpleOptimizer) Brief() string {
+	return opt.Formula().Brief()
+}
+
+func (opt *SimpleOptimizer) String() string {
+	return opt.Formula().String()
+}
+
+func Optimize(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
 	formRepr := formula.Formula()
 	if f, ok := formRepr.(*sat_solver.CNFFormula); ok {
 
@@ -759,32 +771,32 @@ func Optimize(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 		}
 
 
-		fmt.Printf("Running simple optimizer\n")
-
-		err := bve.simplify()
+		err, processID := context.StartProcessing("Run simple optimizer","")
+		if err != nil {
+			return err, nil
+		}
+		err = bve.simplify()
 		if err != nil {
 			if v, ok := err.(*sat_solver.UnsatError); ok {
 				f := bve.Formula()
 				return nil, sat_solver.NewSATFormulaShortcut(f.Formula(), f.Variables(), nil, v)
 			}
 		}
-		fmt.Printf("Simple optimizer exited\n")
+		err = context.EndProcessingFormula(processID, &bve)
+		if err != nil {
+			return err, nil
+		}
 
-		fmt.Printf("After main simplification:\n %s\n", bve.Formula().Brief())
-
-		test_utils.AssertSatResult(bve.Formula(), false)
-
-		bve.RemoveHiddenTautologies()
-		fmt.Printf("After RHT:\n %s\n", bve.Formula().String())
-
-		test_utils.AssertSatResult(bve.Formula(), false)
-
-		//bve.DistributeClauses()
-		//fmt.Printf("After CD:\n %s\n", bve.Formula().String())
-
+		err, processID = context.StartProcessing("Run simple postprocess","")
+		if err != nil {
+			return err, nil
+		}
 		bve.RemoveDanglingVariables()
-		fmt.Printf("After DNG:\n %s\n", bve.Formula().Brief())
-		test_utils.AssertSatResult(bve.Formula(), false)
+		err = context.EndProcessingFormula(processID, &bve)
+		if err != nil {
+			return err, nil
+		}
+
 
 		return nil, bve.Formula()
 	}

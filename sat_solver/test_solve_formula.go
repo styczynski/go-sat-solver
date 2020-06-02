@@ -1,16 +1,13 @@
-package test_utils
+package sat_solver
 
 import (
 	"fmt"
 
 	"github.com/mitchellh/go-sat"
 	"github.com/mitchellh/go-sat/cnf"
-
-	"github.com/go-sat-solver/sat_solver"
 )
 
-func AssertSatResult(formula *sat_solver.SATFormula, expectedResult bool) {
-	fmt.Printf("Test SAT assertion.\n")
+func AssertSatResult(formula *SATFormula, expectedResult bool) {
 	r, assgn := TestSolveFormula(formula)
 	if r != expectedResult {
 		for name, val := range assgn {
@@ -20,11 +17,11 @@ func AssertSatResult(formula *sat_solver.SATFormula, expectedResult bool) {
 	}
 }
 
-func TestSolveFormula(formula *sat_solver.SATFormula) (bool, map[string]bool) {
+func TestSolveFormula(formula *SATFormula) (bool, map[string]bool) {
 	variableRemap := map[int64]int{}
 	variableNames := map[int]string{}
 	freeID := 1
-	if f, ok := formula.Formula().(*sat_solver.CNFFormula); ok {
+	if f, ok := formula.Formula().(*CNFFormula); ok {
 		vars := make([][]int, len(f.Variables))
 		for i, clause := range f.Variables {
 			vars[i] = make([]int, len(clause))

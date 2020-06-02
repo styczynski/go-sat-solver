@@ -124,12 +124,24 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping)
 	return fmt.Errorf("Invalid formula given to convertToCnf: %#v", expr), nil
 }
 
-func ConvertToCNFNaive(formula sat_solver.Entry) (error, *sat_solver.SATFormula) {
+func ConvertToCNFNaive(formula sat_solver.Entry, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
+
+	err, processID := context.StartProcessing("Convert to CNF using Tseytins transformation (naive)", "")
+	if err != nil {
+		return err, nil
+	}
+
 	vars := sat_solver.NewSATVariableMapping()
 	err, cnfFormula := convertToCnf(formula.Formula, vars)
 	if err != nil {
 		return err, nil
 	}
+	newFormula := sat_solver.NewSATFormula(cnfFormula, vars, nil)
 
-	return nil, sat_solver.NewSATFormula(cnfFormula, vars, nil)
+	err = context.EndProcessingFormula(processID, newFormula)
+	if err != nil {
+		return err, nil
+	}
+
+	return nil, newFormula
 }

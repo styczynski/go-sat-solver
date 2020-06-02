@@ -6,10 +6,11 @@ import (
 	"github.com/go-sat-solver/sat_solver"
 	"github.com/go-sat-solver/sat_solver/parser"
 	"github.com/go-sat-solver/sat_solver/preprocessor"
+	"github.com/go-sat-solver/sat_solver/preprocessor/nwf_converter"
 	"github.com/go-sat-solver/sat_solver/solver"
 )
 
-func RunSATSolverOnFilePath(filePath string) (error, int) {
+func RunSATSolverOnFilePath(filePath string, context *sat_solver.SATContext) (error, int) {
 	r, err := os.Open(filePath)
 	if err != nil {
 		return err, 0
@@ -20,7 +21,7 @@ func RunSATSolverOnFilePath(filePath string) (error, int) {
 	if err != nil {
 		return err, 0
 	}
-	err, result := RunSATSolver(ast)
+	err, result := RunSATSolver(ast, context)
 	if err != nil {
 		return err, 0
 	}
@@ -30,21 +31,20 @@ func RunSATSolverOnFilePath(filePath string) (error, int) {
 	return nil, 0
 }
 
-func RunSATSolver(formula *sat_solver.Entry) (error, bool) {
-	//err, nwfFormula := nwf_converter.ConvertToNWF(formula)
-	//if err != nil {
-	//	if _, ok := err.(*sat_solver.UnsatError); ok {
-	//		return nil, false
-	//	}
-	//	return err, false
-	//}
-	//if nwfFormula.IsQuickUNSAT() {
-	//	return nil, false
-	//}
-	//fmt.Printf("Converted to NWF:\n [%s]\n", nwfFormula.String())
+func RunSATSolver(formula *sat_solver.Entry, context *sat_solver.SATContext) (error, bool) {
+	err, nwfFormula := nwf_converter.ConvertToNWF(formula, context)
+	if err != nil {
+		if _, ok := err.(*sat_solver.UnsatError); ok {
+			return nil, false
+		}
+		return err, false
+	}
+	if nwfFormula.IsQuickUNSAT() {
+		return nil, false
+	}
 
-	//optimizedAST := nwfFormula.AST()
-	err, satFormula := preprocessor.PreprocessAST(formula.Formula)
+	optimizedAST := nwfFormula.AST()
+	err, satFormula := preprocessor.PreprocessAST(optimizedAST, context)
 	if err != nil {
 		if _, ok := err.(*sat_solver.UnsatError); ok {
 			return nil, false
@@ -55,7 +55,7 @@ func RunSATSolver(formula *sat_solver.Entry) (error, bool) {
 		return nil, false
 	}
 
-	err, result := solver.Solve(satFormula)
+	err, result := solver.Solve(satFormula, context)
 	if err != nil {
 		if _, ok := err.(*sat_solver.UnsatError); ok {
 			return nil, false

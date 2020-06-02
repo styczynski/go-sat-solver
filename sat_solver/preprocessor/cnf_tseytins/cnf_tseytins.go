@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/go-sat-solver/sat_solver"
-	"github.com/go-sat-solver/sat_solver/test_utils"
 )
 
 func notArr(vars []int64) []int64 {
@@ -145,7 +144,12 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 	return fmt.Errorf("Invalid formula given to convertToCnf: %#v", expr), 0, 0
 }
 
-func ConvertToCNFTseytins(formula *sat_solver.Formula) (error, *sat_solver.SATFormula) {
+func ConvertToCNFTseytins(formula *sat_solver.Formula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
+	err, processID := context.StartProcessing("Convert to CNF using Tseytins transformation", "")
+	if err != nil {
+		return err, nil
+	}
+
 	vars := sat_solver.NewSATVariableMapping()
 	ts := [][]int64{}
 	err, f, topLevelVar := convertToCnf(formula, vars, &ts)
@@ -164,10 +168,10 @@ func ConvertToCNFTseytins(formula *sat_solver.Formula) (error, *sat_solver.SATFo
 		Variables: ts,
 	}, vars, nil)
 
-	fmt.Printf("Tseytins input formula:\n %s\n", formula.String())
-	fmt.Printf("Tseytins output chain:\n %s\n", tseytinsCnf.String())
-
-	test_utils.AssertSatResult(tseytinsCnf, false)
+	err = context.EndProcessingFormula(processID, tseytinsCnf)
+	if err != nil {
+		return err, nil
+	}
 
 	return nil, tseytinsCnf
 }

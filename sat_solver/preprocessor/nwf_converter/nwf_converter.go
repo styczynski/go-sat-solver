@@ -314,9 +314,22 @@ func optimizeTree(formula *sat_solver.NWFFormula, changeDetected *bool) (error, 
 	return nil, formula
 }
 
-func ConvertToNWF(formula *sat_solver.Entry) (error, *sat_solver.SATFormula) {
+func ConvertToNWF(formula *sat_solver.Entry, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
+	err, processID := context.StartProcessing("Convert AST to NWF structure", "")
+	if err != nil {
+		return err, nil
+	}
 	vars := sat_solver.NewSATVariableMapping()
 	err, f := convert(formula.Formula, vars)
+	if err != nil {
+		return err, nil
+	}
+	err = context.EndProcessing(processID, sat_solver.NewSATFormula(f, vars, nil))
+	if err != nil {
+		return err, nil
+	}
+
+	err, processID = context.StartProcessing("Optimize NWF formula", "")
 	if err != nil {
 		return err, nil
 	}
@@ -331,6 +344,11 @@ func ConvertToNWF(formula *sat_solver.Entry) (error, *sat_solver.SATFormula) {
 			break
 		}
 	}
+	outputFormula := sat_solver.NewSATFormula(optF, vars, nil)
+	err = context.EndProcessing(processID, outputFormula)
+	if err != nil {
+		return err, nil
+	}
 
-	return nil, sat_solver.NewSATFormula(optF, vars, nil)
+	return nil, outputFormula
 }
