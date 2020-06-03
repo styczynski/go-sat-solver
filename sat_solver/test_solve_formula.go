@@ -18,7 +18,7 @@ func AssertSatResult(formula *SATFormula, expectedResult bool) {
 }
 
 func TestSolveFormula(formula *SATFormula) (bool, map[string]bool) {
-	variableRemap := map[int64]int{}
+	variableRemap := map[CNFLiteral]int{}
 	variableNames := map[int]string{}
 	freeID := 1
 	if f, ok := formula.Formula().(*CNFFormula); ok {

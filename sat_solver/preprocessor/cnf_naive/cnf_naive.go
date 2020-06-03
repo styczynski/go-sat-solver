@@ -126,7 +126,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping)
 
 func ConvertToCNFNaive(formula sat_solver.Entry, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
 
-	err, processID := context.StartProcessing("Convert to CNF using Tseytins transformation (naive)", "")
+	err, newContext := context.StartProcessing("Convert to CNF using Tseytins transformation (naive)", "")
 	if err != nil {
 		return err, nil
 	}
@@ -138,7 +138,7 @@ func ConvertToCNFNaive(formula sat_solver.Entry, context *sat_solver.SATContext)
 	}
 	newFormula := sat_solver.NewSATFormula(cnfFormula, vars, nil)
 
-	err = context.EndProcessingFormula(processID, newFormula)
+	err = newContext.EndProcessingFormula(newFormula)
 	if err != nil {
 		return err, nil
 	}

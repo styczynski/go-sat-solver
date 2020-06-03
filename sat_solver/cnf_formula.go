@@ -5,15 +5,28 @@ import (
 	"io"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 )
+
+type CNFLiteral int64
+
+const CNF_UNDEFINED = CNFLiteral(0)
+
+type CNFClause []CNFLiteral
 
 type CNFFormula struct {
 	// -1 is false
 	// 1 is true
 	// x > 1 is a variable with unique id = x
 	// x < 1 is a variable with unique id = -x
-	Variables [][]int64
+	Variables []CNFClause
+}
+
+func (clause CNFClause) Copy() CNFClause {
+	newClause := make(CNFClause, len(clause))
+	copy(newClause, clause)
+	return newClause
 }
 
 func (f *CNFFormula) AST(vars *SATVariableMapping) *Formula {
@@ -56,12 +69,12 @@ func (reason *UnsatReasonCNFNormalization) Describe() string {
 
 func (f *CNFFormula) NormalizeVars(vars *SATVariableMapping) (error, *SATVariableMapping, int) {
 	newVars := &SATVariableMapping{
-		names:    map[string]int64{},
-		reverse:  map[int64]string{},
+		names:    map[string]CNFLiteral{},
+		reverse:  map[CNFLiteral]string{},
 		uniqueID: 1,
 		freshVarNameID: vars.freshVarNameID,
 	}
-	newMapping := map[int64]int64{}
+	newMapping := map[CNFLiteral]CNFLiteral{}
 
 	for i, clause := range f.Variables {
 		if len(clause) == 0 {
@@ -126,7 +139,7 @@ func (f *CNFFormula) AndWith(e *CNFFormula) {
 func (f *CNFFormula) MulWith(e *CNFFormula) {
 	lenF := len(f.Variables)
 	lenE := len(e.Variables)
-	newVariables := make([][]int64, 0, lenF * lenE)
+	newVariables := make([]CNFClause, 0, lenF * lenE)
 	shouldAddE := true
 	shouldAddF := true
 
@@ -158,7 +171,7 @@ func (f *CNFFormula) MulWith(e *CNFFormula) {
 }
 
 func (f *CNFFormula) Measure() *SATFormulaStatistics {
-	varIDs := map[int64]struct{}{}
+	varIDs := map[CNFLiteral]struct{}{}
 	clauseCount := int64(len(f.Variables))
 	longestClause := int64(0)
 	shortestClause := int64(math.MaxInt64)
@@ -195,12 +208,12 @@ func (f *CNFFormula) Measure() *SATFormulaStatistics {
 }
 
 func (f *CNFFormula) SaveDIMACSCNF(writer io.Writer, varNames *SATVariableMapping) error {
-	vars := make([][]int, len(f.Variables))
-	variableRemap := map[int64]int{}
-	variableNames := map[int64]string{}
-	freeID := 1
+	vars := make([]CNFClause, len(f.Variables))
+	variableRemap := map[CNFLiteral]CNFLiteral{}
+	variableNames := map[CNFLiteral]string{}
+	freeID := CNFLiteral(1)
 	for i, clause := range f.Variables {
-		vars[i] = make([]int, len(clause))
+		vars[i] = make(CNFClause, len(clause))
 		for j, v := range clause {
 			if v == 1 || v == -1 || v == 0 {
 				return fmt.Errorf("CNF formula cannot contain T/F.")
@@ -270,23 +283,60 @@ func (f *CNFFormula) SaveDIMACSCNFToFile(filePath string, vars *SATVariableMappi
 	return outputFile.Close()
 }
 
+func (literal CNFLiteral) DebugString() string {
+	v := literal
+	if (v == 1) {
+		return "True"
+	} else if (v == -1) {
+		return "False"
+	} else if (v > 0) {
+		return strconv.Itoa(int(v));
+	} else {
+		return "-" + strconv.Itoa(int(-v))
+	}
+}
+
+func LiteralSliceString(literals []CNFLiteral, vars *SATVariableMapping) string {
+	partialResult := make([]string, len(literals))
+	for i, id := range literals {
+		partialResult[i] = id.String(vars)
+	}
+	return "[" + strings.Join(partialResult, "; ") + "]"
+}
+
+func (clause CNFClause) DebugString() string {
+	partialResult := make([]string, len(clause))
+	for i, id := range clause {
+		partialResult[i] = id.DebugString()
+	}
+	return "(" + strings.Join(partialResult, " v ") + ")"
+}
+
+func (literal CNFLiteral) String(vars *SATVariableMapping) string {
+	v := literal
+	if (v == 1) {
+		return "True"
+	} else if (v == -1) {
+		return "False"
+	} else if (v > 0) {
+		return trimVarQuotes(vars.reverse[v])
+	} else {
+		return "-" + trimVarQuotes(vars.reverse[-v])
+	}
+}
+
+func (clause CNFClause) String(vars *SATVariableMapping) string {
+	partialResult := make([]string, len(clause))
+	for i, id := range clause {
+		partialResult[i] = id.String(vars)
+	}
+	return "(" + strings.Join(partialResult, " v ") + ")"
+}
+
 func (f *CNFFormula) String(vars *SATVariableMapping) string {
 	result := make([]string, len(f.Variables))
 	for j, clause := range f.Variables {
-		partialResult := make([]string, len(clause))
-		for i, id := range clause {
-			v := int64(id)
-			if (v == 1) {
-				partialResult[i] = "True"
-			} else if (v == -1) {
-				partialResult[i] = "False"
-			} else if (v > 0) {
-				partialResult[i] = trimVarQuotes(vars.reverse[v])
-			} else {
-				partialResult[i] = "-" + trimVarQuotes(vars.reverse[-v])
-			}
-		}
-		result[j] = "(" + strings.Join(partialResult, " v ") + ")"
+		result[j] = clause.String(vars)
 	}
 	return strings.Join(result, "^")
 }

@@ -12,6 +12,7 @@ type SATContext struct {
 	configuration *SATConfiguration
 	eventCollector log.EventCollector
 	contextID uint
+	processID uint
 }
 
 type SATConfiguration struct {
@@ -19,6 +20,7 @@ type SATConfiguration struct {
 	expectedResult *bool
 	enableSelfVerification bool
 	enableEventCollector bool
+	enableSolverTracing bool
 }
 
 func NewSATContextDebug(inputFile string) *SATContext {
@@ -27,15 +29,17 @@ func NewSATContextDebug(inputFile string) *SATContext {
 		expectedResult:         nil,
 		enableSelfVerification: true,
 		enableEventCollector:   true,
+		enableSolverTracing:    true,
 	})
 }
 
 func NewSATContextAssert(inputFile string, expectedResult bool) *SATContext {
 	return NewSATContext(SATConfiguration{
-			inputFile:              inputFile,
-			expectedResult:         &expectedResult,
-			enableSelfVerification: true,
-			enableEventCollector:   true,
+		inputFile:              inputFile,
+		expectedResult:         &expectedResult,
+		enableSelfVerification: true,
+		enableEventCollector:   true,
+		enableSolverTracing:    true,
 	})
 }
 
@@ -46,6 +50,10 @@ func NewSATContext(conf SATConfiguration) *SATContext {
 		configuration: &conf,
 		eventCollector: log.NewEventLogger(os.Stdout),
 	}
+}
+
+func (context *SATContext) IsSolverTracingEnabled() bool {
+	return context.configuration.enableSolverTracing
 }
 
 func (context *SATContext) IsSelfVerificationEnabled() bool {
@@ -69,16 +77,26 @@ type FormulaLikeResult interface {
 	ToSATFormula() *SATFormula
 }
 
-func (l *SATContext) StartProcessing(stageName string, formatString string, formatArgs... interface{}) (error, uint) {
+func (l *SATContext) StartProcessing(stageName string, formatString string, formatArgs... interface{}) (error, *SATContext) {
 	if l.configuration.enableEventCollector && l.eventCollector != nil {
-		return l.eventCollector.StartProcessing(stageName, l, formatString, formatArgs...)
+		err, processID := l.eventCollector.StartProcessing(stageName, l, formatString, formatArgs...)
+		if err != nil {
+			return err, nil
+		}
+		return nil, &SATContext{
+			context:        l.context,
+			configuration:  l.configuration,
+			eventCollector: l.eventCollector,
+			contextID:      l.contextID,
+			processID:      processID,
+		}
 	}
-	return nil, 0
+	return nil, l
 }
 
-func (l *SATContext) EndProcessing(id uint, result log.DescribableResult) error {
+func (l *SATContext) EndProcessing(result log.DescribableResult) error {
 	if l.configuration.enableEventCollector && l.eventCollector != nil {
-		err := l.eventCollector.EndProcessing(id, result)
+		err := l.eventCollector.EndProcessing(l.processID, result)
 		if err != nil {
 			return err
 		}
@@ -86,9 +104,15 @@ func (l *SATContext) EndProcessing(id uint, result log.DescribableResult) error 
 	return nil
 }
 
-func (l *SATContext) EndProcessingFormula(id uint, result FormulaLikeResult) error {
+func (l *SATContext) Trace(eventName string, formatString string, formatArgs... interface{}) {
 	if l.configuration.enableEventCollector && l.eventCollector != nil {
-		err := l.eventCollector.EndProcessing(id, result)
+		l.eventCollector.MustTrace(l.processID, eventName, formatString, formatArgs...)
+	}
+}
+
+func (l *SATContext) EndProcessingFormula(result FormulaLikeResult) error {
+	if l.configuration.enableEventCollector && l.eventCollector != nil {
+		err := l.eventCollector.EndProcessing(l.processID, result)
 		if err != nil {
 			return err
 		}

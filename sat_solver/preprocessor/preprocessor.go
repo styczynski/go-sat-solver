@@ -7,7 +7,7 @@ import (
 
 func PreprocessAST(formula *sat_solver.Formula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
 
-	err, processID := context.StartProcessing("Convert formula","")
+	err, newContext := context.StartProcessing("Convert formula","")
 	if err != nil {
 		return err, nil
 	}
@@ -18,12 +18,12 @@ func PreprocessAST(formula *sat_solver.Formula, context *sat_solver.SATContext) 
 	if satFormula.IsQuickUNSAT() {
 		return nil, satFormula
 	}
-	err = context.EndProcessingFormula(processID, satFormula)
+	err = newContext.EndProcessingFormula(satFormula)
 	if err != nil {
 		return err, nil
 	}
 
-	err, processID = context.StartProcessing("Preprocess formula","")
+	err, newContext = context.StartProcessing("Preprocess formula","")
 	if err != nil {
 		return err, nil
 	}
@@ -31,7 +31,7 @@ func PreprocessAST(formula *sat_solver.Formula, context *sat_solver.SATContext) 
 	if err != nil {
 		return err, nil
 	}
-	err = context.EndProcessingFormula(processID, simplFormula)
+	err = newContext.EndProcessingFormula(simplFormula)
 	if err != nil {
 		return err, nil
 	}

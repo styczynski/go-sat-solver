@@ -1,10 +1,12 @@
 package preprocessor
 
+import "github.com/go-sat-solver/sat_solver"
+
 /*
  * Eliminates x by clause distribution if the result has fewer clauses than the original
  * (after removing trivially satisfied clauses)
  */
-func (opt *SimpleOptimizer) maybeClauseDistribute(varID int64) {
+func (opt *SimpleOptimizer) maybeClauseDistribute(varID sat_solver.CNFLiteral) {
 	// TODO: Implement
 }
 

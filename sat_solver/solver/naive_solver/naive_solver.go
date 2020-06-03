@@ -36,7 +36,7 @@ func (solver *NaiveSolver) Solve(formula *sat_solver.SATFormula, context *sat_so
 		if formula.Evaluate(vars) {
 			fmt.Printf("Naive solution:\n")
 			for k, v := range vars {
-				fmt.Printf("  %s = %t\n", formula.Variables().Reverse(int64(k+1)), v)
+				fmt.Printf("  %s = %t\n", formula.Variables().Reverse(sat_solver.CNFLiteral(k+1)), v)
 			}
 			return nil, true
 		}
