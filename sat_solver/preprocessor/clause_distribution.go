@@ -25,17 +25,10 @@ func (opt *SimpleOptimizer) tryDistributeClauses() bool {
 						if len1 != 1 && len1 + len2 - 2 == 1 {
 							opt.singular[clause] = struct{}{}
 						}
-						if len1 == 2 && len1 + len2 - 2 != 2 {
-							// Cleanup occurBi lists
-							for v, _ := range clause.vars {
-								delete(opt.occurBi[v], clause)
-							}
-						}
 
 						// Update occur lists and add variables to the clause
 						delete(clause.vars, varID)
 						delete(opt.occur[varID], clause)
-						delete(opt.occurBi[varID], clause)
 
 						isTautology := false
 						for v := range negClause.vars {
@@ -46,13 +39,6 @@ func (opt *SimpleOptimizer) tryDistributeClauses() bool {
 									isTautology = true
 									break
 								}
-							}
-						}
-
-						if len1 != 2 && len1+len2-2 == 2 {
-							// Cleanup occurBi lists
-							for v := range clause.vars {
-								opt.occurBi[v][clause] = struct{}{}
 							}
 						}
 

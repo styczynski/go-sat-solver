@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-sat-solver/sat_solver"
+	"github.com/go-sat-solver/sat_solver/solver"
 )
 
 type CDCLSolver struct {
@@ -34,9 +35,9 @@ func NewCDCLSolver() *CDCLSolver {
 	}
 }
 
-func (solver *CDCLSolver) Solve(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (error, bool) {
+func (solver *CDCLSolver) Solve(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (error, solver.SolverResult) {
 	solver.context = context
-	solver.enableDebugLogging = context.IsSolverTracingEnabled()
+	//solver.enableDebugLogging = context.IsSolverTracingEnabled()
 	if f, ok := formula.Formula().(*sat_solver.CNFFormula); ok {
 		solver.vars = formula.Variables()
 		for _, newClause := range f.Variables {
@@ -93,5 +94,5 @@ func (solver *CDCLSolver) Solve(formula *sat_solver.SATFormula, context *sat_sol
 			}
 		}
 	}
-	return fmt.Errorf("CDCL Solver supports only CNF formulas."), false
+	return fmt.Errorf("CDCL Solver supports only CNF formulas."), SAT_RESULT_UNDEFINED
 }

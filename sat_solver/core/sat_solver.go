@@ -8,6 +8,7 @@ import (
 	"github.com/go-sat-solver/sat_solver/preprocessor"
 	"github.com/go-sat-solver/sat_solver/preprocessor/nwf_converter"
 	"github.com/go-sat-solver/sat_solver/solver"
+	"github.com/go-sat-solver/sat_solver/solver/cdcl_solver"
 )
 
 func RunSATSolverOnFilePath(filePath string, context *sat_solver.SATContext) (error, int) {
@@ -55,7 +56,7 @@ func RunSATSolver(formula *sat_solver.Entry, context *sat_solver.SATContext) (er
 		return nil, false
 	}
 
-	err, result := solver.Solve(satFormula, context)
+	err, result := solver.Solve(satFormula, cdcl_solver.NewCDCLSolver(), context)
 	if err != nil {
 		if _, ok := err.(*sat_solver.UnsatError); ok {
 			return nil, false

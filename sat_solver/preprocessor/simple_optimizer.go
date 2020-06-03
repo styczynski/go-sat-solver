@@ -82,7 +82,6 @@ type SimpleOptimizer struct {
 	clauses map[*Clause]struct{}
 	occur map[sat_solver.CNFLiteral]map[*Clause]struct{}
 	singular map[*Clause]struct{}
-	occurBi map[sat_solver.CNFLiteral]map[*Clause]struct{}
 
 	added map[*Clause]struct{}
 	touched map[sat_solver.CNFLiteral]struct{}
@@ -216,20 +215,6 @@ func (opt *SimpleOptimizer) strenghten(clause *Clause, varID sat_solver.CNFLiter
 
 	len2 := len(clause.vars)
 
-	if len1 == 2 && len2 == 1 {
-		for v := range clause.vars {
-			delete(opt.occurBi[v], clause)
-		}
-		delete(opt.occurBi[varID], clause)
-	} else if len1 > 2 && len2 == 2 {
-		for v := range clause.vars {
-			if _, ok := opt.occurBi[v]; !ok {
-				opt.occurBi[v] = map[*Clause]struct{}{}
-			}
-			opt.occurBi[v][clause] = struct{}{}
-		}
-	}
-
 	if len1 >= 1 && len2 == 1 {
 		opt.singular[clause] = struct{}{}
 	}
@@ -266,9 +251,6 @@ func (opt *SimpleOptimizer) removeClause(clause *Clause) {
 	for v := range opt.occur {
 		delete(opt.occur[v], clause)
 	}
-	for v := range opt.occurBi {
-		delete(opt.occurBi[v], clause)
-	}
 
 	for v := range clause.vars {
 		opt.touched[v] = struct{}{}
@@ -285,11 +267,6 @@ func (opt *SimpleOptimizer) subsume(clause *Clause) {
 	}
 }
 
-func (opt *SimpleOptimizer) RemoveHiddenTautologies() bool {
-	for opt.tryRemoveHiddenTautologies() {}
-	return false
-}
-
 func (opt *SimpleOptimizer) validateState() {
 	return
 	err := opt.checkIfStateIsValid()
@@ -301,7 +278,6 @@ func (opt *SimpleOptimizer) validateState() {
 func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 
 	validOccur := map[sat_solver.CNFLiteral]map[*Clause]struct{}{}
-	validOccurBi := map[sat_solver.CNFLiteral]map[*Clause]struct{}{}
 	validSingular := map[*Clause]struct{}{}
 
 	// Check clauses
@@ -315,18 +291,6 @@ func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 						validOccur[v] = map[*Clause]struct{}{}
 					}
 					validOccur[v][c] = struct{}{}
-				}
-			}
-			if len(c.vars) == 2 {
-				for v := range c.vars {
-					if _, ok := opt.occurBi[v][c]; !ok {
-						return fmt.Errorf("Variable %s occurs in binary clause %s but is not present in occurBi set.", opt.vars.Reverse(v), c.String(opt))
-					} else {
-						if _, ok := validOccurBi[v]; !ok {
-							validOccurBi[v] = map[*Clause]struct{}{}
-						}
-						validOccurBi[v][c] = struct{}{}
-					}
 				}
 			}
 			if len(c.vars) == 1 {
@@ -347,14 +311,6 @@ func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 		}
 	}
 
-	for v := range opt.occurBi {
-		for c := range opt.occurBi[v] {
-			if _, ok := validOccurBi[v][c]; !ok {
-				return fmt.Errorf("Variable %s is not present in binary cluase %s but it's present in the occurBi set.", opt.vars.Reverse(v), c.String(opt))
-			}
-		}
-	}
-
 	for c := range opt.singular {
 		if _, ok := validSingular[c]; !ok {
 			return fmt.Errorf("Clause %s is not a unit clause but is present in the singular set.", c.String(opt))
@@ -368,52 +324,6 @@ func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 	}
 
 	return nil
-}
-
-func (opt *SimpleOptimizer) tryRemoveHiddenTautologies() bool {
-	for v, vBiClauses := range opt.occurBi {
-		for c := range vBiClauses {
-			if len(c.vars) == 2 {
-				// c is clause [v, v2]
-				for v2 := range c.vars {
-					if v != v2 {
-						// Now look for c2 - clause with -v2
-						for c2 := range opt.occurBi[-v2] {
-							if c != c2 && len(c2.vars) == 2 {
-								for v3 := range c2.vars {
-									// c2 is clause [-v2, v3]
-									if v3 != -v2 {
-										// c  = [v,   v2]
-										// c2 = [-v2, v3]
-
-										// We remove c and c2 and replace them with [v, v3] clause
-										opt.removeClause(c2)
-
-										// Remove v2 from c and replace it with v3
-										delete(opt.occurBi[v2], c)
-										delete(opt.occur[v2], c)
-										c.vars = map[sat_solver.CNFLiteral]struct{}{
-											v: {}, v3: {},
-										}
-										opt.occurBi[v3][c] = struct{}{}
-										opt.occur[v3][c] = struct{}{}
-
-										c.Rehash()
-										opt.validateState()
-										return true
-									}
-								}
-								break
-							}
-						}
-						break
-					}
-				}
-				break
-			}
-		}
-	}
-	return false
 }
 
 func (opt *SimpleOptimizer) OptimizeTrivialTautologies() {
@@ -524,20 +434,10 @@ func (opt *SimpleOptimizer) propagateToplevel() {
 	// TODO: Implement
 }
 
-func (opt *SimpleOptimizer) cleanup() error {
-	for {
-		err, r1 := opt.tryPerformUnitPropagation()
-		if err != nil {
-			return err
-		}
-		r2 := opt.tryOptimizeTrivialTautologies()
-		r3 := opt.blockedClauseElimination()
-		r4 := opt.tryRemoveDanglingVariables()
-		if !r1 && !r2 && !r3 && !r4 {
-			break
-		}
-	}
-	return nil
+func (opt *SimpleOptimizer) cleanup() {
+	v := true
+	for v { _, v = opt.tryPerformUnitPropagation() }
+	for opt.blockedClauseElimination() {}
 }
 
 func (opt *SimpleOptimizer) simplify() error {
@@ -633,10 +533,7 @@ func (opt *SimpleOptimizer) simplify() error {
 				break
 			}
 		}
-		err := opt.cleanup()
-		if err != nil {
-			return err
-		}
+		opt.cleanup()
 
 		if len(opt.added) == 0 {
 			break
@@ -650,7 +547,6 @@ func (opt *SimpleOptimizer) selfSubsume(clause *Clause) error {
 	for v := range clause.vars {
 		subsumedBy := opt.findSubsumed(clause.negateClauseVar(v))
 		for _, cPrim := range subsumedBy {
-			//fmt.Printf("<%s> subsumes %s by %s\n", clause.String(opt), cPrim.String(opt), opt.vars.Reverse(v))
 			err := opt.strenghten(cPrim, -v)
 			if err != nil {
 				return err
@@ -722,7 +618,6 @@ func Optimize(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (e
 		bve := SimpleOptimizer{
 			clauses: map[*Clause]struct{}{},
 			occur:   map[sat_solver.CNFLiteral]map[*Clause]struct{}{},
-			occurBi: map[sat_solver.CNFLiteral]map[*Clause]struct{}{},
 			vars:    formula.Variables(),
 			visitedUnits: map[sat_solver.CNFLiteral]struct{}{},
 		}
@@ -749,20 +644,6 @@ func Optimize(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (e
 				}
 				if _, ok := bve.occur[-v]; !ok {
 					bve.occur[-v] = map[*Clause]struct{}{}
-				}
-			}
-			if len(c.vars) == 2 {
-				for _, v := range clause {
-					if _, ok := bve.occurBi[v]; ok {
-						bve.occurBi[v][c] = struct{}{}
-					} else {
-						bve.occurBi[v] = map[*Clause]struct{}{
-							c: {},
-						}
-					}
-					if _, ok := bve.occurBi[-v]; !ok {
-						bve.occurBi[-v] = map[*Clause]struct{}{}
-					}
 				}
 			}
 

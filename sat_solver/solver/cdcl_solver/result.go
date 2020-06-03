@@ -11,6 +11,26 @@ const (
 	SAT_RESULT_SAT        SatResult  = 2
 )
 
+func (result SatResult) String() string {
+	switch result {
+	case  SAT_RESULT_UNDEFINED:
+		return "Undefined"
+	case SAT_RESULT_SAT:
+		return "SAT"
+	case SAT_RESULT_UNSAT:
+		return "UNSAT"
+	}
+	return "Undefined"
+}
+
+func (result SatResult) Brief() string {
+	return result.String()
+}
+
+func (result SatResult) ToBool() bool {
+	return result == SAT_RESULT_SAT
+}
+
 // VariableAssignmentInformation just stores some basic information about assigned variables
 type VariableAssignmentInformation struct {
 	reasonClause  sat_solver.CNFClause // reasonClause is the clause that caused this assignment
@@ -24,11 +44,11 @@ func NewVariableInformation(solver *CDCLSolver, causeOfAssignment sat_solver.CNF
 	}
 }
 
-func (solver *CDCLSolver) foundResult(result SatResult) bool {
+func (solver *CDCLSolver) foundResult(result SatResult) SatResult {
 	if solver.enableDebugLogging {
 		solver.context.Trace("result", "Found result %#v.", result)
 	}
 
 	solver.result = result
-	return result == SAT_RESULT_SAT
+	return result
 }

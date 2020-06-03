@@ -18,7 +18,7 @@ var (
 func main() {
 	ctx := kong.Parse(&cli)
 	for _, file := range cli.Files {
-		err, result := core.RunSATSolverOnFilePath(file, sat_solver.NewSATContextDebug(file))
+		err, result := core.RunSATSolverOnFilePath(file, sat_solver.NewSATContextAssert(file, false))
 		ctx.FatalIfErrorf(err)
 		fmt.Printf("Result:\n  %d\n", result)
 	}
