@@ -13,6 +13,26 @@ func (f *Entry) AST() *Formula {
 	return f.Formula
 }
 
+func (f *Entry) CanBeConvertedToFormula() bool {
+	return false
+}
+
+func (f *Entry) CanBeConvertedToAST() bool {
+	return true
+}
+
+func (f *Entry) ConvertToFormula() *SATFormula {
+	return nil
+}
+
+func (f *Entry) ConvertToAST() *Entry {
+	return f
+}
+
+func (f *Entry) IsCNF() bool {
+	return false
+}
+
 type Variable struct {
 	Name string `"Var" @Name`
 }

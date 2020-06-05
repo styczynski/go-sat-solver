@@ -12,15 +12,16 @@ import (
 
 var (
 	cli struct {
-		Files                  []string `arg:"" type:"existingfile" required:"" help:"GraphQL schema files to parse."`
-		Debug                  bool
-		Trace                  bool
-		PrintFoundAssignment   bool
-		SolverName             string `default:"cdcl"`
-		ExpectedResult         int    `enum:"-1,0,1" default:"-1"`
-		DisableCNFConversion    bool   `default:"false"`
-		DisableASTOptimization  bool   `default:"false"`
-		DisableCNFOptimizations bool   `default:"false"`
+		Files                  []string `arg:"" type:"existingfile" required:"" help:"Input files with formulas."`
+		Debug                  bool     `help:"Display debugging information" short:"d"`
+		Trace                  bool     `help:"Trace solver execution" short:"t"`
+		PrintFoundAssignment   bool     `help:"Print variables assignment on SAT result" short:"a"`
+		SolverName             string   `help:"Specify solver to use" short:"s" default:"cdcl"`
+		LoaderName             string   `help:"Specify format of the loaded input" short:"f" default:"haskell"`
+		ExpectedResult         int      `help:"Specify expected result. This is useful when debugging the solver. Terribly slows down computation." enum:"-1,0,1" default:"-1"`
+		DisableCNFConversion   bool     `help:"Disable conversion to CNF." default:"false"`
+		EnableASTOptimization  bool     `help:"Enable input AST mangling." default:"false"`
+		EnableCNFOptimizations bool     `help:"Enable CNF preprocessing" default:"false"`
 	}
 )
 
@@ -39,9 +40,10 @@ func main() {
 			EnableEventCollector:   cli.Trace || cli.Debug,
 			EnableSolverTracing:    cli.Trace,
 			EnableCNFConversion:    !cli.DisableCNFConversion,
-			EnableASTOptimization:  !cli.DisableASTOptimization,
-			EnableCNFOptimizations: !cli.DisableCNFOptimizations,
+			EnableASTOptimization:  cli.EnableASTOptimization,
+			EnableCNFOptimizations: cli.EnableCNFOptimizations,
 			SolverName:             cli.SolverName,
+			LoaderName:             cli.LoaderName,
 		}))
 		ctx.FatalIfErrorf(err)
 		if cli.PrintFoundAssignment {

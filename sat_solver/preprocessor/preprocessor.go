@@ -2,29 +2,45 @@ package preprocessor
 
 import (
 	"github.com/go-sat-solver/sat_solver"
+	solver "github.com/go-sat-solver/sat_solver/loaders"
 	"github.com/go-sat-solver/sat_solver/preprocessor/cnf_tseytins"
 )
 
-func PreprocessAST(formula *sat_solver.Formula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
+func PreprocessAST(formula solver.LoadedFormula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
 
-	err, newContext := context.StartProcessing("Convert formula","")
-	if err != nil {
-		return err, nil
+	var satFormula *sat_solver.SATFormula
+
+	skipOpt := false
+	if formula.CanBeConvertedToFormula() {
+		satFormula = formula.ConvertToFormula()
+		skipOpt = true
+		if !satFormula.IsCNF() && satFormula.CanBeConvertedToAST() {
+			skipOpt = false
+		}
 	}
-	err, satFormula := cnf_tseytins.ConvertToCNFTseytins(formula, context)
-	if err != nil {
-		return err, nil
-	}
-	if satFormula.IsQuickUNSAT() {
-		return nil, satFormula
-	}
-	err = newContext.EndProcessingFormula(satFormula)
-	if err != nil {
-		return err, nil
+
+	if skipOpt {
+		// Do nothing
+	} else {
+		err, newContext := context.StartProcessing("Convert formula", "")
+		if err != nil {
+			return err, nil
+		}
+		err, satFormula = cnf_tseytins.ConvertToCNFTseytins(formula.ConvertToAST().Formula, context)
+		if err != nil {
+			return err, nil
+		}
+		if satFormula.IsQuickUNSAT() {
+			return nil, satFormula
+		}
+		err = newContext.EndProcessingFormula(satFormula)
+		if err != nil {
+			return err, nil
+		}
 	}
 
 	if context.GetConfiguration().EnableCNFOptimizations {
-		err, newContext = context.StartProcessing("Preprocess formula", "")
+		err, newContext := context.StartProcessing("Preprocess formula", "")
 		if err != nil {
 			return err, nil
 		}
