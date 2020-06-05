@@ -89,3 +89,24 @@ func (f *SATFormula) String() string {
 	}
 	return f.formula.String(f.vars)
 }
+
+func (f *SATFormula) CanBeConvertedToFormula() bool {
+	return true
+}
+
+func (f *SATFormula) CanBeConvertedToAST() bool {
+	return true
+}
+
+func (f *SATFormula) ConvertToFormula() *SATFormula {
+	return f
+}
+
+func (f *SATFormula) ConvertToAST() *Entry {
+	return &Entry{Formula: f.AST()}
+}
+
+func (f *SATFormula) IsCNF() bool {
+	_, ok := f.formula.(*CNFFormula)
+	return ok
+}

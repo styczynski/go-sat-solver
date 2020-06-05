@@ -1,4 +1,4 @@
-package parser
+package haskell
 
 import (
 	"io"
@@ -8,7 +8,20 @@ import (
 	"github.com/alecthomas/participle/lexer/ebnf"
 
 	"github.com/go-sat-solver/sat_solver"
+	solver "github.com/go-sat-solver/sat_solver/loaders"
 )
+
+type HaskellLoaderFactory struct {}
+
+type HaskellLoader struct {}
+
+func (hlf *HaskellLoaderFactory) CreateLoader(context *sat_solver.SATContext) solver.Loader {
+	return HaskellLoader{}
+}
+
+func (hlf *HaskellLoaderFactory) GetName() string {
+	return "haskell"
+}
 
 var (
 	graphQLLexer = lexer.Must(ebnf.New(`
@@ -29,13 +42,15 @@ var (
 	)
 )
 
-func ParseInputFormula(inputFormula io.Reader) (error, *sat_solver.Entry) {
+func (loader HaskellLoader) Load(inputFormula io.Reader, context *sat_solver.SATContext) (error, solver.LoadedFormula) {
 	ast := &sat_solver.Entry{}
 	err := parser.Parse(inputFormula, ast)
 	if err != nil {
 		return err, nil
 	}
-
-	//repr.Println(ast)
 	return nil, ast
+}
+
+func init() {
+	solver.RegisterLoaderFactory(&HaskellLoaderFactory{})
 }

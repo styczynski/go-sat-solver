@@ -27,6 +27,7 @@ type SATConfiguration struct {
 	EnableASTOptimization  bool
 	EnableCNFOptimizations bool
 	SolverName             string
+	LoaderName             string
 }
 
 func DefaultSATConfiguration() SATConfiguration {
@@ -39,6 +40,7 @@ func DefaultSATConfiguration() SATConfiguration {
 		EnableASTOptimization: true,
 		EnableCNFOptimizations: true,
 		SolverName: "",
+		LoaderName: "",
 	}
 }
 
@@ -74,6 +76,7 @@ func (context *SATContext) DescribeConfiguration() string {
 		fmt.Sprintf("\tInput file                => %s", conf.InputFile),
 		fmt.Sprintf("\tExpected result           => %s", expectedResultStr),
 		fmt.Sprintf("\tUsed solver               => '%s'", conf.SolverName),
+		fmt.Sprintf("\tUsed loader               => '%s'", conf.LoaderName),
 		fmt.Sprintf("\tEnable event collector?   => %s", boolToStr(conf.EnableEventCollector)),
 		fmt.Sprintf("\tEnable self verification? => %s", boolToStr(conf.EnableSelfVerification)),
 		fmt.Sprintf("\tEnable solver tracing?    => %s", boolToStr(conf.EnableSolverTracing)),

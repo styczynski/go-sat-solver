@@ -682,5 +682,5 @@ func Optimize(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (e
 		return nil, bve.Formula()
 	}
 
-	return fmt.Errorf("Optimize() cannot handle non-CNF formulas."), nil
+	return nil, formula
 }
