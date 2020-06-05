@@ -1,9 +1,30 @@
 package cdcl_solver
 
+/**
+ * This file provides learning mechanism implementation for a CDCL solver.
+ * You can read more about how CDCL learns new clauses here:
+ *   https://en.wikipedia.org/wiki/Conflict-driven_clause_learning
+ *
+ * You can also see the Minisat C++ code:
+ *   Solver::analyze  https://github.com/niklasso/minisat/blob/master/minisat/core/Solver.cc#L296
+ *
+ */
+
 import (
 	"github.com/go-sat-solver/sat_solver"
 )
 
+type SolverLearnState struct {
+	// Learned clause is stored here
+	currentLearnedClause   sat_solver.CNFClause
+	// Map of visited literals is used only in learnClause() to prevent updating literals twice
+	visited                map[sat_solver.CNFLiteral]bool
+}
+
+/**
+ * Having a clause that caused a conflict to arise, this function updates currentLearnedClause
+ * and returns the decision level that the solver should use to jump backwards.
+ */
 func (solver *CDCLSolver) learnClause(conflictingClause sat_solver.CNFClause) int {
 	literalsLeft := 0
 	solver.currentLearnedClause = solver.currentLearnedClause[:1]
@@ -24,6 +45,7 @@ func (solver *CDCLSolver) learnClause(conflictingClause sat_solver.CNFClause) in
 			}
 			learnedVarLevel := solver.getDecisionLevelForVar(learnedVar)
 			if !solver.visited[learnedVar] && learnedVarLevel > 0 {
+				solver.avsidsBumpVarActivity(learnedVar);
 				if learnedVarLevel >= solver.getDecisionLevel() {
 					literalsLeft++
 				} else {
@@ -36,15 +58,15 @@ func (solver *CDCLSolver) learnClause(conflictingClause sat_solver.CNFClause) in
 		/**
 		 * This loop gets the last visited literal on a trace
 		 */
-		traceLiteral := solver.assignmentTrace[traceIndex]
-		if traceLiteral < 0 {
-			traceLiteral = -traceLiteral
+		traceVisitedLiteral := solver.assignmentTrace[traceIndex]
+		if traceVisitedLiteral < 0 {
+			traceVisitedLiteral = -traceVisitedLiteral
 		}
-		for !solver.visited[traceLiteral] {
+		for !solver.visited[traceVisitedLiteral] {
 			traceIndex = traceIndex-1
-			traceLiteral = solver.assignmentTrace[traceIndex]
-			if traceLiteral < 0 {
-				traceLiteral = -traceLiteral
+			traceVisitedLiteral = solver.assignmentTrace[traceIndex]
+			if traceVisitedLiteral < 0 {
+				traceVisitedLiteral = -traceVisitedLiteral
 			}
 		}
 		// But go back one step more
@@ -66,6 +88,9 @@ func (solver *CDCLSolver) learnClause(conflictingClause sat_solver.CNFClause) in
 	}
 	solver.currentLearnedClause[0] = -traceLiteral
 
+	/**
+	 * Detect the decision level to jump to
+	 */
 	jumpToDecisionLevel := 0
 	if len(solver.currentLearnedClause) > 1 {
 		maxDecisionLevelVarIndex := 1

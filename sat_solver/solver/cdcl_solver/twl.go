@@ -2,9 +2,14 @@ package cdcl_solver
 
 import (
 	"fmt"
-
 	"github.com/go-sat-solver/sat_solver"
 )
+
+type SolverTWLState struct {
+	// This fields maintains TWL data structure
+	// There's more information in twl.go about how TWL works
+	watchedLiterals        map[sat_solver.CNFLiteral][]*TWLRecord
+}
 
 /*
  * Part of the watched literal algorithm.
@@ -15,11 +20,15 @@ type TWLRecord struct {
 	Literal sat_solver.CNFLiteral
 }
 
-func NewTWLRecord(literal sat_solver.CNFLiteral, clause  sat_solver.CNFClause) *TWLRecord {
+func NewTWLRecord(literal sat_solver.CNFLiteral, clause sat_solver.CNFClause) *TWLRecord {
 	return &TWLRecord{
 		Clause:  clause,
 		Literal: literal,
 	}
+}
+
+func (twl *TWLRecord) DebugString() string {
+	return fmt.Sprintf("watching lit %q in clause %s", twl.Literal.DebugString(), twl.Clause.DebugString())
 }
 
 func (twl *TWLRecord) String(s *CDCLSolver) string {

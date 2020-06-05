@@ -23,18 +23,21 @@ func PreprocessAST(formula *sat_solver.Formula, context *sat_solver.SATContext) 
 		return err, nil
 	}
 
-	err, newContext = context.StartProcessing("Preprocess formula","")
-	if err != nil {
-		return err, nil
+	if context.GetConfiguration().EnableCNFOptimizations {
+		err, newContext = context.StartProcessing("Preprocess formula", "")
+		if err != nil {
+			return err, nil
+		}
+		err, simplFormula := Optimize(satFormula, context)
+		if err != nil {
+			return err, nil
+		}
+		err = newContext.EndProcessingFormula(simplFormula)
+		if err != nil {
+			return err, nil
+		}
+		return nil, simplFormula
+	} else {
+		return nil, satFormula
 	}
-	err, simplFormula := Optimize(satFormula, context)
-	if err != nil {
-		return err, nil
-	}
-	err = newContext.EndProcessingFormula(simplFormula)
-	if err != nil {
-		return err, nil
-	}
-
-	return nil, simplFormula
 }

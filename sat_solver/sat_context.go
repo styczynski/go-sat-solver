@@ -2,7 +2,9 @@ package sat_solver
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-sat-solver/sat_solver/log"
 )
@@ -16,31 +18,15 @@ type SATContext struct {
 }
 
 type SATConfiguration struct {
-	inputFile string
-	expectedResult *bool
-	enableSelfVerification bool
-	enableEventCollector bool
-	enableSolverTracing bool
-}
-
-func NewSATContextDebug(inputFile string) *SATContext {
-	return NewSATContext(SATConfiguration{
-		inputFile:              inputFile,
-		expectedResult:         nil,
-		enableSelfVerification: true,
-		enableEventCollector:   true,
-		enableSolverTracing:    true,
-	})
-}
-
-func NewSATContextAssert(inputFile string, expectedResult bool) *SATContext {
-	return NewSATContext(SATConfiguration{
-		inputFile:              inputFile,
-		expectedResult:         &expectedResult,
-		enableSelfVerification: true,
-		enableEventCollector:   true,
-		enableSolverTracing:    true,
-	})
+	InputFile              string
+	ExpectedResult         *bool
+	EnableSelfVerification bool
+	EnableEventCollector   bool
+	EnableSolverTracing    bool
+	EnableCNFConversion    bool
+	EnableASTOptimization  bool
+	EnableCNFOptimizations bool
+	SolverName             string
 }
 
 func NewSATContext(conf SATConfiguration) *SATContext {
@@ -52,18 +38,50 @@ func NewSATContext(conf SATConfiguration) *SATContext {
 	}
 }
 
+func boolToStr(v bool) string {
+	if v {
+		return "[X]"
+	}
+	return "[ ]"
+}
+
+func (context *SATContext) DescribeConfiguration() string {
+	conf := *context.configuration
+
+	expectedResultStr := "N/A"
+	if conf.ExpectedResult != nil {
+		expectedResultStr = fmt.Sprintf("%t", *conf.ExpectedResult)
+	}
+
+	return strings.Join([]string{
+		fmt.Sprintf("\tInput file                => %s", conf.InputFile),
+		fmt.Sprintf("\tExpected result           => %s", expectedResultStr),
+		fmt.Sprintf("\tUsed solver               => '%s'", conf.SolverName),
+		fmt.Sprintf("\tEnable event collector?   => %s", boolToStr(conf.EnableEventCollector)),
+		fmt.Sprintf("\tEnable self verification? => %s", boolToStr(conf.EnableSelfVerification)),
+		fmt.Sprintf("\tEnable solver tracing?    => %s", boolToStr(conf.EnableSolverTracing)),
+		fmt.Sprintf("\tEnable CNF conversion?    => %s", boolToStr(conf.EnableCNFConversion)),
+		fmt.Sprintf("\tEnable CNF optimizations? => %s", boolToStr(conf.EnableCNFConversion && conf.EnableCNFOptimizations)),
+		fmt.Sprintf("\tEnable AST optimization?  => %s", boolToStr(conf.EnableASTOptimization)),
+	}, "\n")
+}
+
+func (context *SATContext) GetConfiguration() *SATConfiguration {
+	return context.configuration
+}
+
 func (context *SATContext) IsSolverTracingEnabled() bool {
-	return context.configuration.enableSolverTracing
+	return context.configuration.EnableSolverTracing
 }
 
 func (context *SATContext) IsSelfVerificationEnabled() bool {
-	return context.configuration.enableSelfVerification
+	return context.configuration.EnableSelfVerification
 }
 
 func (context *SATContext) AssertSelfVerification(formula *SATFormula) {
-	if context.configuration.enableSelfVerification {
-		if context.configuration.expectedResult != nil {
-			AssertSatResult(formula, *context.configuration.expectedResult)
+	if context.configuration.EnableSelfVerification {
+		if context.configuration.ExpectedResult != nil {
+			AssertSatResult(formula, *context.configuration.ExpectedResult)
 		}
 	}
 }
@@ -78,7 +96,7 @@ type FormulaLikeResult interface {
 }
 
 func (l *SATContext) StartProcessing(stageName string, formatString string, formatArgs... interface{}) (error, *SATContext) {
-	if l.configuration.enableEventCollector && l.eventCollector != nil {
+	if l.configuration.EnableEventCollector && l.eventCollector != nil {
 		err, processID := l.eventCollector.StartProcessing(stageName, l, formatString, formatArgs...)
 		if err != nil {
 			return err, nil
@@ -95,7 +113,7 @@ func (l *SATContext) StartProcessing(stageName string, formatString string, form
 }
 
 func (l *SATContext) EndProcessing(result log.DescribableResult) error {
-	if l.configuration.enableEventCollector && l.eventCollector != nil {
+	if l.configuration.EnableEventCollector && l.eventCollector != nil {
 		err := l.eventCollector.EndProcessing(l.processID, result)
 		if err != nil {
 			return err
@@ -105,13 +123,13 @@ func (l *SATContext) EndProcessing(result log.DescribableResult) error {
 }
 
 func (l *SATContext) Trace(eventName string, formatString string, formatArgs... interface{}) {
-	if l.configuration.enableEventCollector && l.eventCollector != nil {
+	if l.configuration.EnableEventCollector && l.eventCollector != nil {
 		l.eventCollector.MustTrace(l.processID, eventName, formatString, formatArgs...)
 	}
 }
 
 func (l *SATContext) EndProcessingFormula(result FormulaLikeResult) error {
-	if l.configuration.enableEventCollector && l.eventCollector != nil {
+	if l.configuration.EnableEventCollector && l.eventCollector != nil {
 		err := l.eventCollector.EndProcessing(l.processID, result)
 		if err != nil {
 			return err

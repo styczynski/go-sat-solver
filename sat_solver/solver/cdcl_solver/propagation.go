@@ -1,8 +1,23 @@
 package cdcl_solver
 
 import (
+	"strings"
+
 	"github.com/go-sat-solver/sat_solver"
 )
+
+type TWL []*TWLRecord
+
+/**
+ * Print human-readable representation of a TWL records set.
+ */
+func (twl TWL) DebugString() string {
+	ret := []string{}
+	for _, record := range twl {
+		ret = append(ret, record.DebugString())
+	}
+	return strings.Join(ret,",")
+}
 
 /*
  * Performs unit propagation using TWLRecord data structure.
@@ -42,6 +57,7 @@ func (solver *CDCLSolver) performUnitPropagation() sat_solver.CNFClause {
 	 * The currentTraceCheckIndex is similar to qhead variable in the Minisat code.
 	 */
 	for solver.currentTraceCheckIndex < assignmentTraceLength {
+		assignmentTraceLength = len(solver.assignmentTrace)
 		// Get the next literal assigned in the assignmentTrace
 		p := solver.assignmentTrace[solver.currentTraceCheckIndex]
 		solver.currentTraceCheckIndex++
@@ -55,7 +71,8 @@ func (solver *CDCLSolver) performUnitPropagation() sat_solver.CNFClause {
 		/*
 		 * Go through all the watched literals inside TWLRecord data structure and check if they're affected by the assignment
 		 */
-		for i, watchedLiteral := range watchedLiteralsForVar {
+		for i := 0; i < len(watchedLiteralsForVar); i++ {
+			watchedLiteral := watchedLiteralsForVar[i]
 
 			/*
 			 * If the watched literal is true we don't have to check anything, because the clause is true.
@@ -76,6 +93,7 @@ func (solver *CDCLSolver) performUnitPropagation() sat_solver.CNFClause {
 					first = watchedLiteralClause[0]
 				}
 
+				//Debug("[TRACE] sat: %s watched literals2: %s)\n", p.DebugString(), TWL(solver.watchedLiterals[p]).DebugString())
 				newWatcher := NewTWLRecord(first, watchedLiteral.Clause)
 
 				/*
@@ -91,10 +109,10 @@ func (solver *CDCLSolver) performUnitPropagation() sat_solver.CNFClause {
 				 * restore the invariant by updating the clause so that it watches L′ instead of −L (2)
 				 */
 				detectedUnwatchedNonFalse := false
-				for j, literal := range watchedLiteralClause {
+				for j, literal := range watchedLiteralClause[2:] {
 					if !solver.currentLiteralValue(literal).IsFalse() {
 						// Watch that literal now (swaps with the second element in watched tuple)
-						watchedLiteralClause[1], watchedLiteralClause[j] = watchedLiteralClause[j], -p
+						watchedLiteralClause[1], watchedLiteralClause[j+2] = watchedLiteralClause[j+2], -p
 						solver.watchedLiterals[-literal] = append(solver.watchedLiterals[-literal], newWatcher)
 						detectedUnwatchedNonFalse = true
 						break
@@ -120,6 +138,9 @@ func (solver *CDCLSolver) performUnitPropagation() sat_solver.CNFClause {
 					if i != len(newWatchedLiterals)-1 {
 						newWatchedLiterals = append(newWatchedLiterals, watchedLiteralsForVar[i+1:]...)
 						solver.watchedLiterals[p] = newWatchedLiterals
+					} else {
+						newWatchedLiterals = append(newWatchedLiterals, watchedLiteralsForVar[len(newWatchedLiterals):]...)
+						solver.watchedLiterals[p] = newWatchedLiterals
 					}
 					return watchedLiteral.Clause
 				}
@@ -136,6 +157,7 @@ func (solver *CDCLSolver) performUnitPropagation() sat_solver.CNFClause {
 		 * to the next literal.
 		 */
 		solver.watchedLiterals[p] = newWatchedLiterals
+		assignmentTraceLength = len(solver.assignmentTrace)
 	}
 
 	return nil

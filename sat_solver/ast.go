@@ -9,6 +9,10 @@ type Entry struct {
 	Formula *Formula `@@`
 }
 
+func (f *Entry) AST() *Formula {
+	return f.Formula
+}
+
 type Variable struct {
 	Name string `"Var" @Name`
 }
@@ -147,6 +151,10 @@ type Formula struct {
 	Or       *Or              ` | ( @@ | "(" @@ ")" )`
 	Implies  *Implies         ` | ( @@ | "(" @@ ")" )`
 	Iff      *Iff             ` | ( @@ | "(" @@ ")" )`
+}
+
+func (f *Formula) AST() *Formula {
+	return f
 }
 
 func (astNode *Formula) String() string {

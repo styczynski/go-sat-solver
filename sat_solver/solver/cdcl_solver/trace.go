@@ -7,23 +7,26 @@ import (
 	"github.com/go-sat-solver/sat_solver"
 )
 
-// This file contains the assignmentTrace-related functions for the solver.
-
-// Assignments returns the assigned variables and their value (true or false).
-// This is only valid if Solve returned true, in which case this is the
-// solution.
-func (solver *CDCLSolver) Assignments() map[sat_solver.CNFLiteral]bool {
-	result := make(map[sat_solver.CNFLiteral]bool)
-	for k, v := range solver.currentAssignment {
-		if v != TERNARY_UNDEFINED {
-			result[k] = v == TERNARY_TRUE
-		}
-	}
-
-	return result
+type CDCLSolverDecisionTrace struct {
+	// This list stores indexes for each decision level
+	// For example let's suppose that:
+	//   assignmentTrace = [ -12, 13, 9, -5, -2, -1 ]
+	// Where those numbers identify variables (negative numbers are negated variables).
+	// So in that context decisionTrace[1] = 2 means that the decision on level 1 starts in assignmentTrace on index 2,
+	// Let's assume decisionTrace[2] = 4
+	// so the decision node has clause [9 v not(5)]
+	//
+	decisionTrace          []int
+	// Current assignment of variables
+	currentAssignment      map[sat_solver.CNFLiteral]Ternary
+	// Meta information attached to currently assigned variables
+	// Mosty information how we assigned those variables
+	varsInfo               map[sat_solver.CNFLiteral]VariableAssignmentInformation
+	// Assignment trace is a list of literals captured when decision was made
+	assignmentTrace        []sat_solver.CNFLiteral
 }
 
-// ValueLit reads the currently set value for a literal.
+// Get current value for a literal
 func (solver *CDCLSolver) currentLiteralValue(l sat_solver.CNFLiteral) Ternary {
 	v := l
 	if v < 0 {
@@ -37,20 +40,30 @@ func (solver *CDCLSolver) currentLiteralValue(l sat_solver.CNFLiteral) Ternary {
 	// If the literal is negative (signed), then XOR 1 will cause the bool
 	// to flip. If result is undef, this has no affect.
 	if l < 0 {
-		result = - result
+		result = result.Negate()
 	}
 
 	return result
 }
 
+/**
+ * Create new decision for a given literal.
+ */
 func (solver *CDCLSolver) newDecision(literal sat_solver.CNFLiteral) {
 	if solver.enableDebugLogging {
-		solver.context.Trace("decide", "Create new decision for %s", literal.String(solver.vars))
+		solver.context.Trace("decide", "Create new decision for %s (%s)", literal.String(solver.vars), literal.DebugString())
 	}
 	solver.decisionTrace = append(solver.decisionTrace, len(solver.assignmentTrace))
 	solver.performLiteralAssertion(literal, nil)
 }
 
+/**
+ * Assert the literal.
+ * This function is used when we encounter unit clause to force the variable value
+ * or when creating decisions about a variable. If the from is nil that means arbitrary decision coming from select.go
+ * If it's not empty then the clause means that the assignment was forces by a occurring conflict.
+ *
+ */
 func (solver *CDCLSolver) performLiteralAssertion(literal sat_solver.CNFLiteral, from sat_solver.CNFClause) {
 	v := literal
 	if v < 0 {
@@ -58,19 +71,26 @@ func (solver *CDCLSolver) performLiteralAssertion(literal sat_solver.CNFLiteral,
 	}
 	solver.varsInfo[v] = NewVariableInformation(solver, from)
 	solver.assignmentTrace = append(solver.assignmentTrace, literal)
-	solver.currentAssignment[v] = BoolToTernary(literal > 0)
+	solver.currentAssignment[v] = BoolToTernary(literal >= 0)
 }
 
+/**
+ * Determine the decision level that the variable is assigned.
+ */
 func (solver *CDCLSolver) getDecisionLevelForVar(v sat_solver.CNFLiteral) int {
 	return solver.varsInfo[v].decisionLevel
 }
 
+/**
+ * Get current decision level
+ */
 func (solver *CDCLSolver) getDecisionLevel() int {
 	return len(solver.decisionTrace)
 }
 
-// reverseToDecisionLevel trims the assignmentTrace down to the given getDecisionLevel (including
-// that getDecisionLevel).
+/**
+ * Go back to the given decision level
+ */
 func (solver *CDCLSolver) reverseToDecisionLevel(decisionLevel int) {
 	if solver.enableDebugLogging {
 		solver.context.Trace("reverse", "Jumping back to getDecisionLevel %d.", decisionLevel)
@@ -80,10 +100,10 @@ func (solver *CDCLSolver) reverseToDecisionLevel(decisionLevel int) {
 		return
 	}
 
-	lastIdx := solver.decisionTrace[decisionLevel]
+	lastDecisionIndex := solver.decisionTrace[decisionLevel]
 
 	// Unassign anything in the assignmentTrace in higher levels
-	for i := len(solver.assignmentTrace) - 1; i >= lastIdx; i-- {
+	for i := len(solver.assignmentTrace) - 1; i >= lastDecisionIndex; i-- {
 		trailVar := solver.assignmentTrace[i]
 		if trailVar < 0 {
 			trailVar = -trailVar
@@ -91,28 +111,29 @@ func (solver *CDCLSolver) reverseToDecisionLevel(decisionLevel int) {
 		delete(solver.currentAssignment, trailVar)
 	}
 
-	// Update our queue head
-	solver.currentTraceCheckIndex = lastIdx
-
-	// Reset the assignmentTrace length
-	solver.assignmentTrace = solver.assignmentTrace[:lastIdx]
+	// Remove values from the trace
 	solver.decisionTrace = solver.decisionTrace[:decisionLevel]
+	solver.assignmentTrace = solver.assignmentTrace[:lastDecisionIndex]
+
+	// Update the index for a checked decision levels
+	// This means that we notify propagation algorithm at what level it should start
+	solver.currentTraceCheckIndex = lastDecisionIndex
 }
 
-// getDecisionTraceString is used for debugging
+/**
+ * Get human-readable string describing the current solver decision trace.
+ */
 func (solver *CDCLSolver) getDecisionTraceString() string {
-	vs := make([]string, len(solver.assignmentTrace))
+	rows := []string{}
 	for i, l := range solver.assignmentTrace {
 		decision := ""
-		for _, idx := range solver.decisionTrace {
-			if idx == i {
-				decision = "| "
+		for _, decisionID := range solver.decisionTrace {
+			if decisionID == i {
+				decision = "> "
 				break
 			}
 		}
-
-		vs[i] = fmt.Sprintf("%s%s", decision, l.String(solver.vars))
+		rows = append(rows, fmt.Sprintf("%s%s", decision, l.DebugString()))
 	}
-
-	return fmt.Sprintf("[%s]", strings.Join(vs, ", "))
+	return fmt.Sprintf("[%s]", strings.Join(rows, ", "))
 }

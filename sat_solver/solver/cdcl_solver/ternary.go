@@ -11,9 +11,9 @@ type Ternary int8
  * Ternary logic states
  */
 const (
-	TERNARY_TRUE      Ternary = 0
-	TERNARY_FALSE             = 1
-	TERNARY_UNDEFINED         = 2
+	TERNARY_TRUE      Ternary = 1
+	TERNARY_FALSE             = 2
+	TERNARY_UNDEFINED         = 3
 )
 
 /**
@@ -28,6 +28,18 @@ func (t Ternary) IsTrue() bool {
  */
 func (t Ternary) IsFalse() bool {
 	return t == TERNARY_FALSE
+}
+
+/**
+ * Negate value.
+ */
+func (t Ternary) Negate() Ternary {
+	if t == TERNARY_FALSE {
+		return TERNARY_TRUE
+	} else if t == TERNARY_TRUE {
+		return TERNARY_FALSE
+	}
+	return TERNARY_UNDEFINED
 }
 
 /**

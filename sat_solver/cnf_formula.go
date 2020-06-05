@@ -23,10 +23,25 @@ type CNFFormula struct {
 	Variables []CNFClause
 }
 
+func (literal CNFLiteral) Sign() bool {
+	return literal < 0
+}
+
+func (literal CNFLiteral) Neg() CNFLiteral {
+	return -literal
+}
+
 func (clause CNFClause) Copy() CNFClause {
 	newClause := make(CNFClause, len(clause))
 	copy(newClause, clause)
 	return newClause
+}
+
+func (lit CNFLiteral) Var() CNFLiteral {
+	if lit < 0 {
+		return -lit
+	}
+	return lit
 }
 
 func (f *CNFFormula) AST(vars *SATVariableMapping) *Formula {
