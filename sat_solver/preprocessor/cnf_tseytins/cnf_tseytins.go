@@ -20,7 +20,7 @@ func copyAndAppend(i []int64, vals ...int64) []int64 {
 	return append(j, vals...)
 }
 
-func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping, ts *[][]int64) (error, int64, int64) {
+func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping, ts *[]sat_solver.CNFClause) (error, sat_solver.CNFLiteral, sat_solver.CNFLiteral) {
 	// For variable return formula unmodified
 	if expr.Variable != nil {
 		v := vars.Get(expr.Variable.Name)
@@ -41,7 +41,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 		c := rightVar
 
 		// (~a | b) & (~a | c) & (~b | ~c | a)
-		*ts = append(*ts, []int64{-a, b}, []int64{-a, c}, []int64{a, -b, -c})
+		*ts = append(*ts, sat_solver.CNFClause{-a, b}, sat_solver.CNFClause{-a, c}, sat_solver.CNFClause{a, -b, -c})
 		//*ts = append(*ts, sat_solver.MakeOr(sat_solver.MakeNot(a), b), sat_solver.MakeOr(sat_solver.MakeNot(a), c),
 		//	sat_solver.MakeOr(sat_solver.MakeOr(sat_solver.MakeNot(b), sat_solver.MakeNot(c)), a))
 		return nil, a, 0
@@ -61,7 +61,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 		c := rightVar
 
 		// (~a | b | c) & (~b | a) & (~c | a)
-		*ts = append(*ts, []int64{-a, b, c}, []int64{ -b, a }, []int64{ -c, a })
+		*ts = append(*ts, sat_solver.CNFClause{-a, b, c}, sat_solver.CNFClause{ -b, a }, sat_solver.CNFClause{ -c, a })
 		//*ts = append(*ts, sat_solver.MakeOr(sat_solver.MakeOr(sat_solver.MakeNot(a), sat_solver.MakeNot(b)), c),
 		//	sat_solver.MakeOr(sat_solver.MakeNot(b), a), sat_solver.MakeOr(sat_solver.MakeNot(c), a))
 		return nil, a, 0
@@ -80,7 +80,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 		b := argVar
 
 		// (~a | ~b) & (b | a)
-		*ts = append(*ts, []int64{-a, -b}, []int64{b, a})
+		*ts = append(*ts, sat_solver.CNFClause{-a, -b}, sat_solver.CNFClause{b, a})
 		return nil, a, 0
 	} else if expr.Implies != nil {
 		err, leftVar, _ := convertToCnf(expr.Implies.Arg1, vars, ts)
@@ -98,7 +98,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 		c := rightVar
 
 		// (~a | ~b | c) & (b | a) & (~c | a)
-		*ts = append(*ts, []int64{-a, -b, c}, []int64{b, a}, []int64{-c, a})
+		*ts = append(*ts, sat_solver.CNFClause{-a, -b, c}, sat_solver.CNFClause{b, a}, sat_solver.CNFClause{-c, a})
 		//*ts = append(*ts, sat_solver.MakeOr(sat_solver.MakeOr(sat_solver.MakeNot(a), sat_solver.MakeNot(b)), c),
 		//	sat_solver.MakeOr(b, a),
 		//	sat_solver.MakeOr(sat_solver.MakeNot(c), a),)
@@ -120,10 +120,10 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 
 		//(a | b | c) & (~b | ~a | c) & (~c | ~a | b) & (~c | ~b | a)
 		*ts = append(*ts,
-			[]int64{a, b, c},
-			[]int64{-b, -a, c},
-			[]int64{-c, -a, b},
-			[]int64{-c, -b, a})
+			sat_solver.CNFClause{a, b, c},
+			sat_solver.CNFClause{-b, -a, c},
+			sat_solver.CNFClause{-c, -a, b},
+			sat_solver.CNFClause{-c, -b, a})
 
 		//*ts = append(*ts,
 		//	sat_solver.MakeOr(sat_solver.MakeOr(a, b), c),
@@ -146,12 +146,12 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping,
 
 func eliminateCNFTF(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormula) {
 	if v, ok := formula.Formula().(*sat_solver.CNFFormula); ok {
-		newVars := make([][]int64, 0, len(v.Variables))
+		newVars := make([]sat_solver.CNFClause, 0, len(v.Variables))
 		for _, clause := range v.Variables {
 			if len(clause) == 0 {
 				return sat_solver.NewUnsatError(sat_solver.NewUnsatReasonCNFNormalization()), nil
 			}
-			newClause := make([]int64, 0, len(clause))
+			newClause := make(sat_solver.CNFClause, 0, len(clause))
 			occursVariable := true
 			occursTrue := false
 			for _, varID := range clause {
@@ -184,13 +184,13 @@ func eliminateCNFTF(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormu
 }
 
 func ConvertToCNFTseytins(formula *sat_solver.Formula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {
-	err, processID := context.StartProcessing("Convert to CNF using Tseytins transformation", "")
+	err, newContext := context.StartProcessing("Convert to CNF using Tseytins transformation", "")
 	if err != nil {
 		return err, nil
 	}
 
 	vars := sat_solver.NewSATVariableMapping()
-	ts := [][]int64{}
+	ts := []sat_solver.CNFClause{}
 	err, f, topLevelVar := convertToCnf(formula, vars, &ts)
 	if err != nil {
 		return err, nil
@@ -198,9 +198,9 @@ func ConvertToCNFTseytins(formula *sat_solver.Formula, context *sat_solver.SATCo
 
 	// Add substitution for the entire formula
 	if topLevelVar != 0 {
-		ts = append(ts, []int64{ topLevelVar })
+		ts = append(ts, sat_solver.CNFClause{ topLevelVar })
 	} else {
-		ts = append(ts, []int64{ f })
+		ts = append(ts, sat_solver.CNFClause{ f })
 	}
 
 	tseytinsCnf := sat_solver.NewSATFormula(&sat_solver.CNFFormula{
@@ -211,7 +211,7 @@ func ConvertToCNFTseytins(formula *sat_solver.Formula, context *sat_solver.SATCo
 		return err, nil
 	}
 
-	err = context.EndProcessingFormula(processID, tseytinsCnf)
+	err = newContext.EndProcessingFormula(tseytinsCnf)
 	if err != nil {
 		return err, nil
 	}

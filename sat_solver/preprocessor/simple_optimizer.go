@@ -8,7 +8,7 @@ import (
 	"github.com/go-sat-solver/sat_solver"
 )
 
-func hashVarID(varID int64) int64 {
+func hashVarID(varID sat_solver.CNFLiteral) int64 {
 	if varID < 0 {
 		return (1 >> int64(-varID) % 63)
 	}
@@ -30,7 +30,7 @@ type UnsatReasonStrengthening struct {
 	varName string
 }
 
-func NewUnsatReasonStrengthening(clause *Clause, varID int64, opt *SimpleOptimizer) *UnsatReasonStrengthening {
+func NewUnsatReasonStrengthening(clause *Clause, varID sat_solver.CNFLiteral, opt *SimpleOptimizer) *UnsatReasonStrengthening {
 	return &UnsatReasonStrengthening{
 		clause: clause.String(opt),
 		varName: opt.vars.Reverse(varID),
@@ -43,12 +43,12 @@ func (reason *UnsatReasonStrengthening) Describe() string {
 
 type Clause struct {
 	hash int64
-	vars map[int64]struct{}
+	vars map[sat_solver.CNFLiteral]struct{}
 	isDeleted bool
 }
 
-func (c *Clause) negateClauseVar(varIDToNegate int64) *Clause {
-	newVars := map[int64]struct{}{}
+func (c *Clause) negateClauseVar(varIDToNegate sat_solver.CNFLiteral) *Clause {
+	newVars := map[sat_solver.CNFLiteral]struct{}{}
 	for varID := range c.vars {
 		if varID == varIDToNegate || varID == -varIDToNegate {
 			newVars[-varID] = struct{}{}
@@ -80,15 +80,14 @@ func (c *Clause) Rehash() {
 
 type SimpleOptimizer struct {
 	clauses map[*Clause]struct{}
-	occur map[int64]map[*Clause]struct{}
+	occur map[sat_solver.CNFLiteral]map[*Clause]struct{}
 	singular map[*Clause]struct{}
-	occurBi map[int64]map[*Clause]struct{}
 
 	added map[*Clause]struct{}
-	touched map[int64]struct{}
+	touched map[sat_solver.CNFLiteral]struct{}
 	strenghtened map[*Clause]struct{}
 
-	visitedUnits map[int64]struct{}
+	visitedUnits map[sat_solver.CNFLiteral]struct{}
 
 	vars *sat_solver.SATVariableMapping
 	context *sat_solver.SATContext
@@ -96,11 +95,11 @@ type SimpleOptimizer struct {
 
 func (opt *SimpleOptimizer) Formula() *sat_solver.SATFormula {
 	newFormula := sat_solver.CNFFormula{
-		Variables: make([][]int64, len(opt.clauses)),
+		Variables: make([]sat_solver.CNFClause, len(opt.clauses)),
 	}
 	i := 0
 	for c := range opt.clauses {
-		newClause := make([]int64, len(c.vars))
+		newClause := make(sat_solver.CNFClause, len(c.vars))
 		j := 0
 		for v := range c.vars {
 			newClause[j] = v
@@ -159,7 +158,7 @@ func (opt *SimpleOptimizer) subset(clause *Clause, clause2 *Clause) bool {
 
 func (opt *SimpleOptimizer) findSubsumed(clause *Clause) []*Clause {
 	res := []*Clause{}
-	pLit := int64(0)
+	pLit := sat_solver.CNFLiteral(0)
 	pMin := int64(math.MaxInt64)
 	for v := range clause.vars {
 		occurLen := int64(len(opt.occur[v]))
@@ -204,7 +203,7 @@ func (opt *SimpleOptimizer) getAddedClauseCandidates(added *map[*Clause]struct{}
 }
 
 // Remove varID from clause
-func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) error {
+func (opt *SimpleOptimizer) strenghten(clause *Clause, varID sat_solver.CNFLiteral) error {
 	//fmt.Printf("Strengthen clause: %s by %s\n", clause.String(opt), opt.vars.Reverse(varID))
 
 	len1 := len(clause.vars)
@@ -215,20 +214,6 @@ func (opt *SimpleOptimizer) strenghten(clause *Clause, varID int64) error {
 	clause.Rehash()
 
 	len2 := len(clause.vars)
-
-	if len1 == 2 && len2 == 1 {
-		for v := range clause.vars {
-			delete(opt.occurBi[v], clause)
-		}
-		delete(opt.occurBi[varID], clause)
-	} else if len1 > 2 && len2 == 2 {
-		for v := range clause.vars {
-			if _, ok := opt.occurBi[v]; !ok {
-				opt.occurBi[v] = map[*Clause]struct{}{}
-			}
-			opt.occurBi[v][clause] = struct{}{}
-		}
-	}
 
 	if len1 >= 1 && len2 == 1 {
 		opt.singular[clause] = struct{}{}
@@ -266,9 +251,6 @@ func (opt *SimpleOptimizer) removeClause(clause *Clause) {
 	for v := range opt.occur {
 		delete(opt.occur[v], clause)
 	}
-	for v := range opt.occurBi {
-		delete(opt.occurBi[v], clause)
-	}
 
 	for v := range clause.vars {
 		opt.touched[v] = struct{}{}
@@ -285,11 +267,6 @@ func (opt *SimpleOptimizer) subsume(clause *Clause) {
 	}
 }
 
-func (opt *SimpleOptimizer) RemoveHiddenTautologies() bool {
-	for opt.tryRemoveHiddenTautologies() {}
-	return false
-}
-
 func (opt *SimpleOptimizer) validateState() {
 	return
 	err := opt.checkIfStateIsValid()
@@ -300,8 +277,7 @@ func (opt *SimpleOptimizer) validateState() {
 
 func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 
-	validOccur := map[int64]map[*Clause]struct{}{}
-	validOccurBi := map[int64]map[*Clause]struct{}{}
+	validOccur := map[sat_solver.CNFLiteral]map[*Clause]struct{}{}
 	validSingular := map[*Clause]struct{}{}
 
 	// Check clauses
@@ -315,18 +291,6 @@ func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 						validOccur[v] = map[*Clause]struct{}{}
 					}
 					validOccur[v][c] = struct{}{}
-				}
-			}
-			if len(c.vars) == 2 {
-				for v := range c.vars {
-					if _, ok := opt.occurBi[v][c]; !ok {
-						return fmt.Errorf("Variable %s occurs in binary clause %s but is not present in occurBi set.", opt.vars.Reverse(v), c.String(opt))
-					} else {
-						if _, ok := validOccurBi[v]; !ok {
-							validOccurBi[v] = map[*Clause]struct{}{}
-						}
-						validOccurBi[v][c] = struct{}{}
-					}
 				}
 			}
 			if len(c.vars) == 1 {
@@ -347,14 +311,6 @@ func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 		}
 	}
 
-	for v := range opt.occurBi {
-		for c := range opt.occurBi[v] {
-			if _, ok := validOccurBi[v][c]; !ok {
-				return fmt.Errorf("Variable %s is not present in binary cluase %s but it's present in the occurBi set.", opt.vars.Reverse(v), c.String(opt))
-			}
-		}
-	}
-
 	for c := range opt.singular {
 		if _, ok := validSingular[c]; !ok {
 			return fmt.Errorf("Clause %s is not a unit clause but is present in the singular set.", c.String(opt))
@@ -368,52 +324,6 @@ func (opt *SimpleOptimizer) checkIfStateIsValid() error {
 	}
 
 	return nil
-}
-
-func (opt *SimpleOptimizer) tryRemoveHiddenTautologies() bool {
-	for v, vBiClauses := range opt.occurBi {
-		for c := range vBiClauses {
-			if len(c.vars) == 2 {
-				// c is clause [v, v2]
-				for v2 := range c.vars {
-					if v != v2 {
-						// Now look for c2 - clause with -v2
-						for c2 := range opt.occurBi[-v2] {
-							if c != c2 && len(c2.vars) == 2 {
-								for v3 := range c2.vars {
-									// c2 is clause [-v2, v3]
-									if v3 != -v2 {
-										// c  = [v,   v2]
-										// c2 = [-v2, v3]
-
-										// We remove c and c2 and replace them with [v, v3] clause
-										opt.removeClause(c2)
-
-										// Remove v2 from c and replace it with v3
-										delete(opt.occurBi[v2], c)
-										delete(opt.occur[v2], c)
-										c.vars = map[int64]struct{}{
-											v: {}, v3: {},
-										}
-										opt.occurBi[v3][c] = struct{}{}
-										opt.occur[v3][c] = struct{}{}
-
-										c.Rehash()
-										opt.validateState()
-										return true
-									}
-								}
-								break
-							}
-						}
-						break
-					}
-				}
-				break
-			}
-		}
-	}
-	return false
 }
 
 func (opt *SimpleOptimizer) OptimizeTrivialTautologies() {
@@ -450,7 +360,7 @@ func (opt *SimpleOptimizer) PerformUnitPropagation() error {
 
 func (opt *SimpleOptimizer) tryPerformUnitPropagation() (error, bool) {
 
-	varToRemove := int64(0)
+	varToRemove := sat_solver.CNFLiteral(0)
 	for c := range opt.singular {
 		if len(c.vars) == 1 && !c.isDeleted {
 			for varID := range c.vars {
@@ -513,7 +423,7 @@ func (opt *SimpleOptimizer) tryPerformUnitPropagation() (error, bool) {
 	return nil, true
 }
 
-func (opt *SimpleOptimizer) maybeEliminate(varID int64) {
+func (opt *SimpleOptimizer) maybeEliminate(varID sat_solver.CNFLiteral) {
 	if len(opt.occur[varID]) > 10 || len(opt.occur[-varID]) > 10 {
 		return // Heuristic cut-off
 	}
@@ -524,20 +434,10 @@ func (opt *SimpleOptimizer) propagateToplevel() {
 	// TODO: Implement
 }
 
-func (opt *SimpleOptimizer) cleanup() error {
-	for {
-		err, r1 := opt.tryPerformUnitPropagation()
-		if err != nil {
-			return err
-		}
-		r2 := opt.tryOptimizeTrivialTautologies()
-		r3 := opt.blockedClauseElimination()
-		r4 := opt.tryRemoveDanglingVariables()
-		if !r1 && !r2 && !r3 && !r4 {
-			break
-		}
-	}
-	return nil
+func (opt *SimpleOptimizer) cleanup() {
+	v := true
+	for v { _, v = opt.tryPerformUnitPropagation() }
+	for opt.blockedClauseElimination() {}
 }
 
 func (opt *SimpleOptimizer) simplify() error {
@@ -553,7 +453,7 @@ func (opt *SimpleOptimizer) simplify() error {
 	 * Set of variables
 	 * A variable is added to this set if it occurs in a clause being added, removed, or strengthened. Initially all variables are "touched"
 	 */
-	opt.touched = map[int64]struct{}{}
+	opt.touched = map[sat_solver.CNFLiteral]struct{}{}
 	for clause := range opt.clauses {
 		for v := range clause.vars {
 			opt.touched[v] = struct{}{}
@@ -625,7 +525,7 @@ func (opt *SimpleOptimizer) simplify() error {
 		for {
 			//fmt.Printf("Eliminate variables\n")
 			S := opt.touched
-			opt.touched = map[int64]struct{}{}
+			opt.touched = map[sat_solver.CNFLiteral]struct{}{}
 			for x := range S {
 				opt.maybeEliminate(x)
 			}
@@ -633,10 +533,7 @@ func (opt *SimpleOptimizer) simplify() error {
 				break
 			}
 		}
-		err := opt.cleanup()
-		if err != nil {
-			return err
-		}
+		opt.cleanup()
 
 		if len(opt.added) == 0 {
 			break
@@ -650,7 +547,6 @@ func (opt *SimpleOptimizer) selfSubsume(clause *Clause) error {
 	for v := range clause.vars {
 		subsumedBy := opt.findSubsumed(clause.negateClauseVar(v))
 		for _, cPrim := range subsumedBy {
-			//fmt.Printf("<%s> subsumes %s by %s\n", clause.String(opt), cPrim.String(opt), opt.vars.Reverse(v))
 			err := opt.strenghten(cPrim, -v)
 			if err != nil {
 				return err
@@ -721,14 +617,13 @@ func Optimize(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (e
 
 		bve := SimpleOptimizer{
 			clauses: map[*Clause]struct{}{},
-			occur:   map[int64]map[*Clause]struct{}{},
-			occurBi: map[int64]map[*Clause]struct{}{},
+			occur:   map[sat_solver.CNFLiteral]map[*Clause]struct{}{},
 			vars:    formula.Variables(),
-			visitedUnits: map[int64]struct{}{},
+			visitedUnits: map[sat_solver.CNFLiteral]struct{}{},
 		}
 
 		for _, clause := range f.Variables {
-			clauseVars := map[int64]struct{}{}
+			clauseVars := map[sat_solver.CNFLiteral]struct{}{}
 			for _, v := range clause {
 				clauseVars[v] = struct{}{}
 			}
@@ -751,27 +646,13 @@ func Optimize(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (e
 					bve.occur[-v] = map[*Clause]struct{}{}
 				}
 			}
-			if len(c.vars) == 2 {
-				for _, v := range clause {
-					if _, ok := bve.occurBi[v]; ok {
-						bve.occurBi[v][c] = struct{}{}
-					} else {
-						bve.occurBi[v] = map[*Clause]struct{}{
-							c: {},
-						}
-					}
-					if _, ok := bve.occurBi[-v]; !ok {
-						bve.occurBi[-v] = map[*Clause]struct{}{}
-					}
-				}
-			}
 
 			c.hash = hashVal
 			bve.clauses[c] = struct{}{}
 		}
 
 
-		err, processID := context.StartProcessing("Run simple optimizer","")
+		err, newContext := context.StartProcessing("Run simple optimizer","")
 		if err != nil {
 			return err, nil
 		}
@@ -782,17 +663,17 @@ func Optimize(formula *sat_solver.SATFormula, context *sat_solver.SATContext) (e
 				return nil, sat_solver.NewSATFormulaShortcut(f.Formula(), f.Variables(), nil, v)
 			}
 		}
-		err = context.EndProcessingFormula(processID, &bve)
+		err = newContext.EndProcessingFormula(&bve)
 		if err != nil {
 			return err, nil
 		}
 
-		err, processID = context.StartProcessing("Run simple postprocess","")
+		err, newContext = context.StartProcessing("Run simple postprocess","")
 		if err != nil {
 			return err, nil
 		}
 		bve.RemoveDanglingVariables()
-		err = context.EndProcessingFormula(processID, &bve)
+		err = newContext.EndProcessingFormula(&bve)
 		if err != nil {
 			return err, nil
 		}

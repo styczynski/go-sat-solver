@@ -19,6 +19,8 @@ type DescribableResult interface {
 type EventCollector interface {
 	StartProcessing(stageName string, IDProvider IDProvider, formatString string, formatArgs... interface{}) (error, uint)
 	EndProcessing(id uint, result DescribableResult) error
+	Trace(id uint, eventName string, formatString string, formatArgs... interface{}) error
+	MustTrace(id uint, eventName string, formatString string, formatArgs... interface{})
 }
 
 type EventLogger struct {
@@ -42,6 +44,26 @@ func NewEventLogger(output io.Writer) *EventLogger {
 		levels:           map[uint]uint{},
 		newID:            1,
 		output:           output,
+	}
+}
+
+func (l *EventLogger) Trace(id uint, eventName string, formatString string, formatArgs... interface{}) error {
+	prefix := ""
+	nestLevel := int(l.levels[l.providedIDs[id]])
+	if nestLevel > 0 {
+		prefix = strings.Repeat("  ", nestLevel) + "| "
+	}
+	_, err := l.output.Write([]byte(fmt.Sprintf("[%d]%s [%s] %s: %s\n", l.providedIDs[id], prefix, eventName, l.processName[id], fmt.Sprintf(formatString, formatArgs...))))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *EventLogger) MustTrace(id uint, eventName string, formatString string, formatArgs... interface{}) {
+	err := l.Trace(id, eventName, formatString, formatArgs...)
+	if err != nil {
+		panic(err)
 	}
 }
 

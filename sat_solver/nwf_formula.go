@@ -122,7 +122,7 @@ func (f *NWFOr) recNormalizeVars(vars *SATVariableMapping, newVars *SATVariableM
 }
 
 type NWFVar struct {
-	ID    int64
+	ID    CNFLiteral
 }
 
 func (f *NWFVar) AST(vars *SATVariableMapping) *Formula {
@@ -352,8 +352,8 @@ func (f *NWFFormula) Negate() {
 
 func (f *NWFFormula) NormalizeVars(vars *SATVariableMapping) (error, *SATVariableMapping, int) {
 	newVars := &SATVariableMapping{
-		names:    map[string]int64{},
-		reverse:  map[int64]string{},
+		names:    map[string]CNFLiteral{},
+		reverse:  map[CNFLiteral]string{},
 		uniqueID: 1,
 		freshVarNameID: vars.freshVarNameID,
 	}

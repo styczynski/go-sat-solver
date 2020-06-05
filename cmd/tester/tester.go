@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/go-sat-solver/sat_solver"
 	"github.com/go-sat-solver/sat_solver/core"
 )
 
@@ -41,17 +42,19 @@ func main() {
 				return err
 			}
 
-			fmt.Printf("RUN TEST %s\n", testNoPostfix)
+			fmt.Printf("Execute test %s: ", testNoPostfix)
 
-			err, result := core.RunSATSolverOnFilePath(path)
+			err, result := core.RunSATSolverOnFilePath(path, sat_solver.DefaultSATContext())
 			if err != nil {
 				fmt.Printf("______________RESULT____________:\n  Test: %s, Err: %s\n___________________", testNoPostfix, err.Error())
 				return nil
 			}
 
-			fmt.Printf("______________RESULT____________:\n  Test: %s, Got: %d, Expected: %d\n___________________", testNoPostfix, result, expectedTestResult)
-			if result != expectedTestResult {
+			if result.IsUndefined() || result.ToInt() != expectedTestResult {
+				fmt.Printf(" ERR\n______________RESULT____________:\n  Test: %s, Got: %d, Expected: %d\n___________________", testNoPostfix, result.ToInt(), expectedTestResult)
 				panic(fmt.Sprintf("WRONG ANSWER ON TEST %s", testNoPostfix))
+			} else {
+				fmt.Printf(" OK\n")
 			}
 		}
 		return nil
