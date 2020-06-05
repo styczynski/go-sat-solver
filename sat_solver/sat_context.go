@@ -29,6 +29,23 @@ type SATConfiguration struct {
 	SolverName             string
 }
 
+func DefaultSATConfiguration() SATConfiguration {
+	return SATConfiguration{
+		InputFile: "",
+		EnableSelfVerification: false,
+		EnableEventCollector: false,
+		EnableSolverTracing: false,
+		EnableCNFConversion: true,
+		EnableASTOptimization: true,
+		EnableCNFOptimizations: true,
+		SolverName: "",
+	}
+}
+
+func DefaultSATContext() *SATContext {
+	return NewSATContext(DefaultSATConfiguration())
+}
+
 func NewSATContext(conf SATConfiguration) *SATContext {
 	return &SATContext{
 		context: context.Background(),
