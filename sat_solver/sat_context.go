@@ -37,8 +37,8 @@ func DefaultSATConfiguration() SATConfiguration {
 		EnableEventCollector: false,
 		EnableSolverTracing: false,
 		EnableCNFConversion: true,
-		EnableASTOptimization: true,
-		EnableCNFOptimizations: true,
+		EnableASTOptimization: false,
+		EnableCNFOptimizations: false,
 		SolverName: "",
 		LoaderName: "",
 	}
@@ -54,6 +54,15 @@ func NewSATContext(conf SATConfiguration) *SATContext {
 		contextID: 0,
 		configuration: &conf,
 		eventCollector: log.NewEventLogger(os.Stdout),
+	}
+}
+
+func NewSATContextWithEventCollector(conf SATConfiguration, eventCollector log.EventCollector) *SATContext {
+	return &SATContext{
+		context: context.Background(),
+		contextID: 0,
+		configuration: &conf,
+		eventCollector: eventCollector,
 	}
 }
 

@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"strings"
 
 	"github.com/go-sat-solver/sat_solver"
 	solver2 "github.com/go-sat-solver/sat_solver/loaders"
@@ -16,6 +17,19 @@ import (
 	_ "github.com/go-sat-solver/sat_solver/loaders/dimacs_cnf"
 )
 
+func RunSATSolverOnString(input string, context *sat_solver.SATContext) (error, solver.SolverResult) {
+	r := strings.NewReader(input)
+	err, loadedFormula := solver2.LoadFormula(context.GetConfiguration().LoaderName, r, context)
+	if err != nil {
+		return err, solver.EmptySolverResult{}
+	}
+	err, result := RunSATSolverOnLoadedFormula(loadedFormula, context)
+	if err != nil {
+		return err, solver.EmptySolverResult{}
+	}
+	return nil, result
+}
+
 func RunSATSolverOnFilePath(filePath string, context *sat_solver.SATContext) (error, solver.SolverResult) {
 	r, err := os.Open(filePath)
 	if err != nil {
@@ -27,7 +41,7 @@ func RunSATSolverOnFilePath(filePath string, context *sat_solver.SATContext) (er
 	if err != nil {
 		return err, solver.EmptySolverResult{}
 	}
-	err, result := RunSATSolver(loadedFormula, context)
+	err, result := RunSATSolverOnLoadedFormula(loadedFormula, context)
 	if err != nil {
 		return err, solver.EmptySolverResult{}
 	}
@@ -38,7 +52,7 @@ type ConvertableToAST interface {
 	AST() *sat_solver.Formula
 }
 
-func RunSATSolver(formula solver2.LoadedFormula, context *sat_solver.SATContext) (error, solver.SolverResult) {
+func RunSATSolverOnLoadedFormula(formula solver2.LoadedFormula, context *sat_solver.SATContext) (error, solver.SolverResult) {
 	context.Trace("init", "SAT solver inited with the following configuration:\n%s", context.DescribeConfiguration())
 
 	var globalResult solver.SolverResult
@@ -79,10 +93,6 @@ func RunSATSolver(formula solver2.LoadedFormula, context *sat_solver.SATContext)
 		err, satFormula = preprocessor.PreprocessAST(optimizedAST, executionContext)
 		if err != nil {
 			if _, ok := err.(*sat_solver.UnsatError); ok {
-				err = executionContext.EndProcessing(globalResult)
-				if err != nil {
-					panic(err)
-				}
 				return nil, solver.SolverQuickUnsatResult{}
 			}
 			return err, solver.EmptySolverResult{}

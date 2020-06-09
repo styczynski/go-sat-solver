@@ -152,7 +152,7 @@ func eliminateCNFTF(formula *sat_solver.SATFormula) (error, *sat_solver.SATFormu
 				return sat_solver.NewUnsatError(sat_solver.NewUnsatReasonCNFNormalization()), nil
 			}
 			newClause := make(sat_solver.CNFClause, 0, len(clause))
-			occursVariable := true
+			occursVariable := false
 			occursTrue := false
 			for _, varID := range clause {
 				if varID == 1 {
