@@ -7,5 +7,4 @@ dist: trusty
 sudo: false
 install: true
 script:
-  - env GO111MODULE=on go get ./...
   - env GO111MODULE=on go build ./cmd/go-sat-solver/main.go
