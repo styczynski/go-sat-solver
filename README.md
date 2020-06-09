@@ -1,7 +1,9 @@
-# Go SAT solver
+# [Go SAT solver](http://styczynski.in/go-sat-solver/)
 
 This isn't the most effective implementation. This code was written as an assignment for a Logic Course at MIM UW (2020).
 The implementation should be fairly bug-less.
+
+[See online (WASM) version](http://styczynski.in/go-sat-solver/)
 
 ## Quickstart
 
@@ -54,4 +56,17 @@ This solver is suitable for any serious application, but you shall consider usin
 
 ## Web interface
 
-Solver has its web interface available (this was done using compilation of Go to WASM).
+Solver has its web [interface available](http://styczynski.in/go-sat-solver/) (this was done using compilation of Go to WASM).
+
+You can compile the frontend in a following way:
+```bash
+    $ make wasm
+    $ make build-web
+```
+
+## Running tests
+
+You can run testing scripts that examines the solver on inputs from `/tests/` directory using the following command:
+```bash
+    $ go run ./cmd/tester/tester.go ./tests
+```
