@@ -1,6 +1,6 @@
 package cdcl_solver
 
-import "github.com/go-sat-solver/sat_solver"
+import "github.com/styczynski/go-sat-solver/sat_solver"
 
 /**
  * Result of the execution of the solver

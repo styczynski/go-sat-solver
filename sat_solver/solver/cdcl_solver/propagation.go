@@ -3,7 +3,7 @@ package cdcl_solver
 import (
 	"strings"
 
-	"github.com/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
 )
 
 type TWL []*TWLRecord

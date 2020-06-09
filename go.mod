@@ -1,4 +1,4 @@
-module github.com/go-sat-solver
+module github.com/styczynski/go-sat-solver
 
 go 1.13
 

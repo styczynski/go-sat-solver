@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-sat-solver/sat_solver/log"
+	"github.com/styczynski/go-sat-solver/sat_solver/log"
 )
 
 type SATContext struct {

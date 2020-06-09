@@ -7,8 +7,8 @@ import (
 	"github.com/alecthomas/participle/lexer"
 	"github.com/alecthomas/participle/lexer/ebnf"
 
-	"github.com/go-sat-solver/sat_solver"
-	solver "github.com/go-sat-solver/sat_solver/loaders"
+	"github.com/styczynski/go-sat-solver/sat_solver"
+	solver "github.com/styczynski/go-sat-solver/sat_solver/loaders"
 )
 
 type HaskellLoaderFactory struct {}

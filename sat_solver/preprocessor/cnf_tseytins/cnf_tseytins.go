@@ -3,7 +3,7 @@ package cnf_tseytins
 import (
 	"fmt"
 
-	"github.com/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
 )
 
 func notArr(vars []int64) []int64 {

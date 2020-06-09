@@ -3,7 +3,7 @@ package cnf_tseytins
 import (
 	"fmt"
 
-	"github.com/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
 )
 
 func convertToCnfNaive(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping, ts *[]*sat_solver.Formula) (error, *sat_solver.Formula, bool) {

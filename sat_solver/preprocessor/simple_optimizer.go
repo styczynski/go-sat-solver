@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
 )
 
 func hashVarID(varID sat_solver.CNFLiteral) int64 {

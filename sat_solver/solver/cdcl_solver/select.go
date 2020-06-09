@@ -1,7 +1,7 @@
 package cdcl_solver
 
 import (
-	"github.com/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
 )
 
 /**

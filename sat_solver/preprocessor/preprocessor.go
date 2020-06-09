@@ -1,9 +1,9 @@
 package preprocessor
 
 import (
-	"github.com/go-sat-solver/sat_solver"
-	solver "github.com/go-sat-solver/sat_solver/loaders"
-	"github.com/go-sat-solver/sat_solver/preprocessor/cnf_tseytins"
+	"github.com/styczynski/go-sat-solver/sat_solver"
+	solver "github.com/styczynski/go-sat-solver/sat_solver/loaders"
+	"github.com/styczynski/go-sat-solver/sat_solver/preprocessor/cnf_tseytins"
 )
 
 func PreprocessAST(formula solver.LoadedFormula, context *sat_solver.SATContext) (error, *sat_solver.SATFormula) {

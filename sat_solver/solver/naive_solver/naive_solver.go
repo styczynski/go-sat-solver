@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/go-sat-solver/sat_solver"
-	solv "github.com/go-sat-solver/sat_solver/solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
+	solv "github.com/styczynski/go-sat-solver/sat_solver/solver"
 )
 
 /**

@@ -3,7 +3,7 @@ package cnf_naive
 import (
 	"fmt"
 
-	"github.com/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
 )
 
 func ConvertToCnfAndChain(exprs []*sat_solver.Formula, vars *sat_solver.SATVariableMapping) (error, *sat_solver.CNFFormula) {

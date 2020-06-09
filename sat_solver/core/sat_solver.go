@@ -6,17 +6,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-sat-solver/sat_solver"
-	solver2 "github.com/go-sat-solver/sat_solver/loaders"
-	"github.com/go-sat-solver/sat_solver/preprocessor"
-	"github.com/go-sat-solver/sat_solver/preprocessor/nwf_converter"
-	"github.com/go-sat-solver/sat_solver/solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
+	solver2 "github.com/styczynski/go-sat-solver/sat_solver/loaders"
+	"github.com/styczynski/go-sat-solver/sat_solver/preprocessor"
+	"github.com/styczynski/go-sat-solver/sat_solver/preprocessor/nwf_converter"
+	"github.com/styczynski/go-sat-solver/sat_solver/solver"
 
-	_ "github.com/go-sat-solver/sat_solver/solver/cdcl_solver"
-	_ "github.com/go-sat-solver/sat_solver/solver/naive_solver"
+	_ "github.com/styczynski/go-sat-solver/sat_solver/solver/cdcl_solver"
+	_ "github.com/styczynski/go-sat-solver/sat_solver/solver/naive_solver"
 
-	_ "github.com/go-sat-solver/sat_solver/loaders/haskell"
-	_ "github.com/go-sat-solver/sat_solver/loaders/dimacs_cnf"
+	_ "github.com/styczynski/go-sat-solver/sat_solver/loaders/haskell"
+	_ "github.com/styczynski/go-sat-solver/sat_solver/loaders/dimacs_cnf"
 )
 
 func RunSATSolverOnString(input string, context *sat_solver.SATContext) (error, solver.SolverResult) {

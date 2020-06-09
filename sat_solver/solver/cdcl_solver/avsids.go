@@ -20,7 +20,7 @@ package cdcl_solver
 
 import (
 	"container/heap"
-	"github.com/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver"
 )
 
 type AVSIDS struct {

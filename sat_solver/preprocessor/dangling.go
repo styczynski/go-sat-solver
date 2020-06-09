@@ -1,6 +1,6 @@
 package preprocessor
 
-import "github.com/go-sat-solver/sat_solver"
+import "github.com/styczynski/go-sat-solver/sat_solver"
 
 func (opt *SimpleOptimizer) RemoveDanglingVariables() {
 	for opt.tryRemoveDanglingVariables() {}

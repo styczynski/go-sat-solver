@@ -1,6 +1,6 @@
 package preprocessor
 
-import "github.com/go-sat-solver/sat_solver"
+import "github.com/styczynski/go-sat-solver/sat_solver"
 
 /*
  * Eliminates x by clause distribution if the result has fewer clauses than the original
