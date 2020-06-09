@@ -54,9 +54,11 @@ Or use other solver than the default one (currently `cnf` and `naive` options ar
 The solver was firstly a DPLL-style solver but further improvements led to CDCL-like solver. 
 I was using Minisat source code as a reference.
 The solver supports the following features:
-* Selection partially based on [Adaptive VSIDS](https://arxiv.org/pdf/1506.08905.pdf)
+* [Unit propagation](https://en.wikipedia.org/wiki/Unit_propagation)
+* [Adaptive VSIDS](https://arxiv.org/pdf/1506.08905.pdf)
 * [TWL](http://people.mpi-inf.mpg.de/~mfleury/sat_twl.pdf)
-* Clause learning
+* [Clause learning](https://www.cs.princeton.edu/courses/archive/fall13/cos402/readings/SAT_learning_clauses.pdf)
+* Tricks from this paper [http://fmv.jku.at/papers/EenBiere-SAT05.pdf]
 
 The learned clauses are not optimized based on adaptive VSIDS, but this feature is planned in the future.
 
