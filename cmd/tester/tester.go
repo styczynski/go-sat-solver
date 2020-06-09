@@ -11,8 +11,8 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/go-sat-solver/sat_solver"
-	"github.com/go-sat-solver/sat_solver/core"
+	"github.com/styczynski/go-sat-solver/sat_solver"
+	"github.com/styczynski/go-sat-solver/sat_solver/core"
 )
 
 var (
