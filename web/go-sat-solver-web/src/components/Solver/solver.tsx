@@ -17,7 +17,7 @@ if (!WebAssembly.instantiateStreaming) { // polyfill
 const go = new (window as any).Go();
 go.argv = [''];
 let mod: any, inst: any;
-WebAssembly.instantiateStreaming(fetch("sat.wasm", {cache: 'no-cache'}), go.importObject).then((result) => {
+WebAssembly.instantiateStreaming(fetch("/go-sat-solver/sat.wasm", {cache: 'no-cache'}), go.importObject).then((result) => {
     mod = result.module;
     inst = result.instance;
 }).catch((err) => {

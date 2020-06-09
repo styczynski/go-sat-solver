@@ -12,7 +12,7 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/go-sat-solver/html.worker.js"
   },
   {
-    "revision": "77a2856a8b6370dd3327983da05d3359",
+    "revision": "1ceaf4a7131b0e7270f68f202a5a1d6c",
     "url": "/go-sat-solver/index.html"
   },
   {
@@ -24,7 +24,7 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/go-sat-solver/static/css/3.621bc1dc.chunk.css"
   },
   {
-    "revision": "0a90bcf6ea9935de1b08",
+    "revision": "abce608083897d23fe33",
     "url": "/go-sat-solver/static/css/main.1359096b.chunk.css"
   },
   {
@@ -296,8 +296,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/go-sat-solver/static/js/9.307fefa9.chunk.js"
   },
   {
-    "revision": "0a90bcf6ea9935de1b08",
-    "url": "/go-sat-solver/static/js/main.0c401cc8.chunk.js"
+    "revision": "abce608083897d23fe33",
+    "url": "/go-sat-solver/static/js/main.5c584b1d.chunk.js"
   },
   {
     "revision": "e5685449905377878541",
