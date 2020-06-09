@@ -6,7 +6,7 @@ matrix:
 
 before_install:
   # gox simplifies building for multiple architectures
-  - go get github.com/styczynski/go-sat-solver
+  - go get github.com/mitchellh/gox
 
 install:
   - # skip
