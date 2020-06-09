@@ -25,6 +25,6 @@ start-web:
 	cd web/go-sat-solver-web && yarn start
 
 build-web:
-	cd web/go-sat-solver-web && yarn build && mv ./web/go-sat-solver-web/build ./docs
+	cd web/go-sat-solver-web && yarn build && sleep 2 && mv ./web/go-sat-solver-web/build ./docs
 
 .PHONY: all clean build install

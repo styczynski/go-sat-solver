@@ -6,6 +6,8 @@ module.exports = function override(config, env) {
         config.plugins = [];
     }
 
+    config.output.publicPath = "/go-sat-solver/";
+
     console.log(config.module.rules);
     const extensionsToExclude = /\.(less|config|variables|overrides)$/;
     for (const rule of config.module.rules) {

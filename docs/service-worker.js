@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/precache-manifest.f56b371a5063f2597b8d0a3f7dbe1f99.js"
+  "/go-sat-solver/precache-manifest.c0104589600ad27e03a360d8ed460057.js"
 );
 
 self.addEventListener('message', (event) => {
