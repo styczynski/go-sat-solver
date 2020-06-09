@@ -1,4 +1,4 @@
-import React, {useEffect} from "react";
+import React from "react";
 import ReactDOM from "react-dom";
 import {EventCollector} from "../Solver/solver";
 import { LogInner } from "./logInner";

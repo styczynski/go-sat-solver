@@ -24,7 +24,7 @@
   },
   "scripts": {
     "start": "react-app-rewired start",
-    "build": "react-app-rewired build",
+    "build": "CI=true GENERATE_SOURCEMAP=false react-app-rewired build --expose-gc --max-old-space-size=8192",
     "test": "react-app-rewired test",
     "eject": "react-app-rewired eject"
   },
