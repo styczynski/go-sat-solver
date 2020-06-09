@@ -58,7 +58,7 @@ The solver supports the following features:
 * [Adaptive VSIDS](https://arxiv.org/pdf/1506.08905.pdf)
 * [TWL](http://people.mpi-inf.mpg.de/~mfleury/sat_twl.pdf)
 * [Clause learning](https://www.cs.princeton.edu/courses/archive/fall13/cos402/readings/SAT_learning_clauses.pdf)
-* Tricks from this paper [http://fmv.jku.at/papers/EenBiere-SAT05.pdf]
+* [Variable elimination techniques](http://fmv.jku.at/papers/EenBiere-SAT05.pdf)
 
 The learned clauses are not optimized based on adaptive VSIDS, but this feature is planned in the future.
 
