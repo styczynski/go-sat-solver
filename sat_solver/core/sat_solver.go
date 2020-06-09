@@ -1,6 +1,8 @@
 package core
 
 import (
+	"bufio"
+	"io"
 	"os"
 	"strings"
 
@@ -31,11 +33,18 @@ func RunSATSolverOnString(input string, context *sat_solver.SATContext) (error, 
 }
 
 func RunSATSolverOnFilePath(filePath string, context *sat_solver.SATContext) (error, solver.SolverResult) {
-	r, err := os.Open(filePath)
-	if err != nil {
-		return err, solver.EmptySolverResult{}
+	var r io.Reader
+	var err error
+	if filePath == "-" {
+		r = bufio.NewReader(os.Stdin)
+	} else {
+		f, err := os.Open(filePath)
+		if err != nil {
+			return err, solver.EmptySolverResult{}
+		}
+		defer f.Close()
+		r = f
 	}
-	defer r.Close()
 
 	err, loadedFormula := solver2.LoadFormula(context.GetConfiguration().LoaderName, r, context)
 	if err != nil {

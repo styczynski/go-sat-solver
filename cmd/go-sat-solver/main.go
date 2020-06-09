@@ -12,7 +12,7 @@ import (
 
 var (
 	cli struct {
-		Files                  []string `arg:"" type:"existingfile" required:"" help:"Input files with formulas."`
+		Files                  []string `arg:"" optional:"" help:"Input files with formulas."`
 		Debug                  bool     `help:"Display debugging information" short:"d"`
 		Trace                  bool     `help:"Trace solver execution" short:"t"`
 		PrintFoundAssignment   bool     `help:"Print variables assignment on SAT result" short:"a"`
@@ -27,6 +27,9 @@ var (
 
 func main() {
 	ctx := kong.Parse(&cli)
+	if len(cli.Files) == 0 {
+		cli.Files = []string{ "-" }
+	}
 	for _, file := range cli.Files {
 		var expectedResult *bool = nil
 		if cli.ExpectedResult == 0 || cli.ExpectedResult == 1 {

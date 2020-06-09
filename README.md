@@ -31,6 +31,14 @@ The default input format is `haskell`-like ADT syntax:
     X := And (X) (X) | Or (X) (X) | Iff (X) (X) | Implies (X) (X) | Not (X) | Var "string" | T | F
 ```
 
+Use no parameters or `"-"` to load from standard input:
+```bash
+    $ go-sat-solver < file.in
+    $ cat file.in | go-sat-solver -
+    $ go-sat-solver file.in
+```
+The presented commands are equivalent.
+
 You may want to load other types of files for example DIMACS CNF:
 ```bash
     $ go-sat-solver -f cnf input.cnf
