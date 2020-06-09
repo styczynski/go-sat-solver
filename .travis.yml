@@ -4,3 +4,5 @@ go:
 env:
 - GO111MODULE=on
 go_import_path: github.com/styczynski/go-sat-solver
+script:
+- go build github.com/styczynski/go-sat-solver
