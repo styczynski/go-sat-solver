@@ -1,4 +1,4 @@
-# [Go SAT solver](http://styczynski.in/go-sat-solver/) [![Build Status](https://travis-ci.com/styczynski/go-sat-solver.svg?branch=master)](https://travis-ci.com/styczynski/go-sat-solver)
+# [Go SAT solver](http://styczynski.in/go-sat-solver/) [![Build Status](https://travis-ci.com/styczynski/go-sat-solver.svg?branch=master)](https://travis-ci.com/styczynski/go-sat-solver) ![Go](https://github.com/styczynski/go-sat-solver/workflows/Go/badge.svg) ![Docker Image Version (latest semver)](https://img.shields.io/docker/v/styczynski/go-sat-solver?label=docker%20version)
 
 This isn't the most effective implementation. This code was written as an assignment for a Logic Course at MIM UW (2020).
 The implementation should be fairly bug-less.
