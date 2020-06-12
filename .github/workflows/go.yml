@@ -30,11 +30,14 @@ jobs:
             dep ensure
         fi
 
-    - name: Build
+    - name: Build CLI
       run: go build -v ./cmd/go-sat-solver/main.go
+      
+    - name: Build tester
+      run: go build -v ./cmd/tester/tester.go
 
     - name: Test
-      run: go test -v .
+      run: go run ./cmd/tester/tester.go ./tests
 
     - name: Go Release Binary
       uses: ngs/go-release.action@v1.0.2
