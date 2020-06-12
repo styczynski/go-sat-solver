@@ -39,10 +39,3 @@ jobs:
     - name: Test
       run: go run ./cmd/tester/tester.go ./tests
 
-    - name: goreleaser
-      uses: goreleaser/goreleaser-action@master
-      with:
-        args: release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
