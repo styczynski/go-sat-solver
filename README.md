@@ -5,6 +5,15 @@ The implementation should be fairly bug-less.
 
 [See online (WASM) version](http://styczynski.in/go-sat-solver/)
 
+## Run using Docker
+
+If you have Docker installed you can run the solver simply using:
+```bash
+    $ docker run -i styczynski/go-sat-solver:1.0.0 < input_formula.txt
+```
+
+Please read the rest of the README to learn how to work with input formats.
+
 ## Quickstart
 
 You have to [install go](https://golang.org/doc/install) on your machine 

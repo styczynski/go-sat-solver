@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"fmt"
 	"strings"
@@ -149,4 +150,8 @@ func main() {
 	c := make(chan struct{}, 0)
 	js.Global().Set("solve", js.FuncOf(solve))
 	<-c
+}*/
+
+func main() {
+
 }
