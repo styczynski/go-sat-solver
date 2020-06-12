@@ -7,7 +7,7 @@ The implementation should be fairly bug-less.
 
 ## Run using Docker
 
-If you have Docker installed you can run the solver simply using:
+If you have [Docker](https://docs.docker.com/get-docker/) installed you can [run the solver](https://hub.docker.com/r/styczynski/go-sat-solver) simply using:
 ```bash
     $ docker run -i styczynski/go-sat-solver:1.0.0 < input_formula.txt
 ```
