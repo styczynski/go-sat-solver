@@ -152,7 +152,7 @@ func (solver *NaiveSolver) Solve(formula *sat_solver.SATFormula, context *sat_so
 	iterCount := int64(math.Exp2(float64(varCount)))
 	for i := int64(0); i < iterCount; i++ {
 		for j := int64(0); j < varCount; j++ {
-			vars[j] = (int64(1) >> j) & values != 0
+			vars[j] = (int64(1) >> uint64(j)) & values != 0
 		}
 		//
 		// Evaluate formula if it's true then we print the result

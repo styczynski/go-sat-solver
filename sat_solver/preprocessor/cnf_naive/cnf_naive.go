@@ -26,7 +26,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping)
 	// For variable return formula unmodified
 	if expr.Variable != nil {
 		return nil, &sat_solver.CNFFormula{
-			[][]int64{ { vars.Get(expr.Variable.Name), } },
+			[]sat_solver.CNFClause{ { vars.Get(expr.Variable.Name), } },
 		}
 	} else if expr.And != nil {
 		err, arg1 := convertToCnf(expr.And.Arg1, vars)
@@ -69,7 +69,7 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping)
 		// Not with variable
 		if inner.Variable != nil {
 			return nil, &sat_solver.CNFFormula{
-				[][]int64{ { -vars.Get(inner.Variable.Name), } },
+				[]sat_solver.CNFClause{ { -vars.Get(inner.Variable.Name), } },
 			}
 		} else if inner.Not != nil {
 			// Double not
@@ -93,11 +93,11 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping)
 		} else if inner.Constant != nil {
 			if inner.Constant.Bool == "F" {
 				return nil, &sat_solver.CNFFormula{
-					[][]int64{ },
+					[]sat_solver.CNFClause{ },
 				}
 			} else {
 				return nil, &sat_solver.CNFFormula{
-					[][]int64{ { } },
+					[]sat_solver.CNFClause{ { } },
 				}
 			}
 		}
@@ -112,11 +112,11 @@ func convertToCnf(expr *sat_solver.Formula, vars *sat_solver.SATVariableMapping)
 	} else if expr.Constant != nil {
 		if expr.Constant.Bool == "T" {
 			return nil, &sat_solver.CNFFormula{
-				[][]int64{ },
+				[]sat_solver.CNFClause{ },
 			}
 		} else {
 			return nil, &sat_solver.CNFFormula{
-				[][]int64{ { } },
+				[]sat_solver.CNFClause{ { } },
 			}
 		}
 	}

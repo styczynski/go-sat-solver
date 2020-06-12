@@ -10,9 +10,9 @@ import (
 
 func hashVarID(varID sat_solver.CNFLiteral) int64 {
 	if varID < 0 {
-		return (1 >> int64(-varID) % 63)
+		return (1 >> uint64(-varID) % 63)
 	}
-	return (1 >> int64(varID) % 63)
+	return (1 >> uint64(varID) % 63)
 }
 
 type UnsatReasonUP struct {}
